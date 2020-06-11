@@ -152,6 +152,8 @@ public:
 	bool IsIdleAt(FIntPoint position) const;
 
 	BlockMatrix GetBlockMatrix() const;
+	int GetNumRows() const { return numRows; }
+	int GetNumCols() const { return numCols; }
 
 private:
 	const BlockPhysicalStatus* GetBlockAt(FIntPoint position) const;
@@ -165,6 +167,6 @@ private:
 	static Block GetRandomBlock();
 
 	TArray<BlockPhysicalStatus> blocks;
-	int rowSize = 0;
-	int colSize = 0;
+	int numRows = 0;
+	int numCols = 0;
 };

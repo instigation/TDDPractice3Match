@@ -6,17 +6,17 @@
 BlockPhysics::BlockPhysics(const BlockMatrix& blockMatrix)
 {
 	const auto block2DArray = blockMatrix.GetBlock2DArray();
-	rowSize = block2DArray.Num();
-	colSize = rowSize == 0 ? 0 : block2DArray[0].Num();
-	for (int i = 0; i < rowSize; i++) {
-		for (int j = 0; j < colSize; j++) {
+	numRows = block2DArray.Num();
+	numCols = numRows == 0 ? 0 : block2DArray[0].Num();
+	for (int i = 0; i < numRows; i++) {
+		for (int j = 0; j < numCols; j++) {
 			blocks.Add(BlockPhysicalStatus(block2DArray[i][j], FIntPoint{ i, j }));
 		}
 	}
 }
 
 BlockPhysics::BlockPhysics(BlockPhysics&& other)
-	:blocks(MoveTemp(other.blocks)), rowSize(other.rowSize), colSize(other.colSize)
+	:blocks(MoveTemp(other.blocks)), numRows(other.numRows), numCols(other.numCols)
 {
 
 }
@@ -61,11 +61,11 @@ void BlockPhysics::Tick(float deltaSeconds)
 		}
 	}
 	// Set blocks to falling && Generate new blocks
-	for (int col = 0; col < colSize; col++) {
-		if (NumBlocksInColumn(col) < colSize) {
+	for (int col = 0; col < numCols; col++) {
+		if (NumBlocksInColumn(col) < numCols) {
 			UE_LOG(LogTemp, Display, TEXT("Generating blocks to fill the empty cells.."));
-			int destinationRowIndex = rowSize - 1;
-			int blockToFallRowIndex = rowSize - 1;
+			int destinationRowIndex = numRows - 1;
+			int blockToFallRowIndex = numRows - 1;
 			while (destinationRowIndex >= 0) {
 				if ((blockToFallRowIndex >= 0) && IsEmpty(FIntPoint{ blockToFallRowIndex, col })) {
 					blockToFallRowIndex--;
@@ -173,14 +173,14 @@ BlockMatrix BlockPhysics::GetBlockMatrix() const
 			blockMatrix.Add(ToFIntPoint(block.currentAction->GetPosition()), block.block);
 		}
 	}
-	return BlockMatrix(rowSize, colSize, blockMatrix);
+	return BlockMatrix(numRows, numCols, blockMatrix);
 }
 
 void BlockPhysics::UpdateBlockStatus(const BlockMatrix& blockMatrix)
 {
 	const auto updatedBlocks = blockMatrix.GetBlock2DArray();
-	for (int i = 0; i < rowSize; i++) {
-		for (int j = 0; j < colSize; j++) {
+	for (int i = 0; i < numRows; i++) {
+		for (int j = 0; j < numCols; j++) {
 			if (updatedBlocks[i][j] == Block::INVALID) {
 				auto blockStatus = GetBlockAt(FIntPoint{ i, j });
 				if (blockStatus == nullptr) {

@@ -36,6 +36,8 @@ public:
     bool HasNoMatch() const;
     Block At(int row, int col) const;
     void ProcessMatch();
+    int GetNumRows() const { return numRows; }
+    int GetNumCols() const { return numCols; }
 private:
     static int GetRow(FIntPoint point) { return point.X; }
     static int GetCol(FIntPoint point) { return point.Y; }
