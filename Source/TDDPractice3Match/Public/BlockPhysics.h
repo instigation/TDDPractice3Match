@@ -13,6 +13,8 @@ enum class ActionType {
 	GetsDestroyed
 };
 
+FString PrettyPrint(ActionType actionType);
+
 class BlockAction {
 public:
 	BlockAction(FVector2D initialPos) :position(initialPos) {}
@@ -169,4 +171,5 @@ private:
 	TArray<BlockPhysicalStatus> blocks;
 	int numRows = 0;
 	int numCols = 0;
+	float elapsedTime = 0.0f;
 };

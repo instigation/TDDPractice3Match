@@ -70,9 +70,7 @@ bool IfNoMatchOnSwipeThenBlocksShouldReturn::RunTest(const FString& Parameters) 
 	return true;
 }
 
-IMPLEMENT_SIMPLE_AUTOMATION_TEST(OnSwipeMatchCheckShouldOccur, "Board.OnSwipe.Match should occur when there's a match", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
-bool OnSwipeMatchCheckShouldOccur::RunTest(const FString& Parameters)
-{
+bool OnSwipeMatchCheckShouldOccurTest(int tickDivider) {
 	// Setup
 	const auto swipeStart = FIntPoint{ 0,3 };
 	const auto swipeEnd = FIntPoint{ 0,2 };
@@ -82,26 +80,53 @@ bool OnSwipeMatchCheckShouldOccur::RunTest(const FString& Parameters)
 	// Swipe
 	blockPhysics.RecieveSwipeInput(swipeStart, swipeEnd);
 
-	// After swipe animation end
+	// During swipe animation
 	const auto swipeMoveTime = blockPhysics.GRID_SIZE / blockPhysics.SWIPE_MOVE_SPEED;
-	blockPhysics.Tick(swipeMoveTime + TestUtils::veryShortTime);
+	for (int i = 0; i < tickDivider - 1; i++) {
+		blockPhysics.Tick(swipeMoveTime / tickDivider);
+		if (!TestUtils::AreIdenticalExcept(blockPhysics.GetBlockMatrix(), blockMatrix, TArray<FIntPoint>{swipeStart, swipeEnd}))
+			return false;
+	}
+
+	// After swipe animation end
+	blockPhysics.Tick(swipeMoveTime / tickDivider + TestUtils::veryShortTime);
 	const auto matchedBlockPositions = TArray<FIntPoint>{ FIntPoint{0,0}, FIntPoint{0,1}, FIntPoint{0,2} };
 	if (!TestUtils::IsCorrectlyGettingDestroyed(blockPhysics, matchedBlockPositions))
 		return false;
 
+	// During destroy animation
+	const auto matchedAndSwipedBlockPositions = TArray<FIntPoint>{ FIntPoint{0,0}, FIntPoint{0,1}, FIntPoint{0,2}, FIntPoint{0,3} };
+	for (int i = 0; i < tickDivider - 1; i++) {
+		blockPhysics.Tick(blockPhysics.DESTROY_ANIMATION_TIME / tickDivider);
+		if (!TestUtils::IsCorrectlyGettingDestroyed(blockPhysics, matchedBlockPositions))
+			return false;
+		if (!TestUtils::AreIdenticalExcept(blockPhysics.GetBlockMatrix(), blockMatrix, matchedAndSwipedBlockPositions))
+			return false;
+	}
+
 	// After destroy animation end
-	blockPhysics.Tick(blockPhysics.DESTROY_ANIMATION_TIME + TestUtils::veryShortTime);
+	blockPhysics.Tick(blockPhysics.DESTROY_ANIMATION_TIME / tickDivider + TestUtils::veryShortTime);
 	if (!TestUtils::IsCorrectlyEmpty(blockPhysics, matchedBlockPositions))
 		return false;
 	const auto shouldBeSpawnedCols = TArray<int>{ 0, 1, 2 };
 	if (!TestUtils::AreNewBlocksSpawnedAtTop(blockPhysics, shouldBeSpawnedCols))
 		return false;
-	  
+
 	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(OnSwipeMatchCheckShouldOccur, "Board.OnSwipe.Match should occur when there's a match", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool OnSwipeMatchCheckShouldOccur::RunTest(const FString& Parameters)
+{
+	return OnSwipeMatchCheckShouldOccurTest(0);
 }
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(TickFrequencyShouldNotMatter, "Board.OnSwipe.Should work fine even if Tick is frequent", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
 bool TickFrequencyShouldNotMatter::RunTest(const FString& Parameters) {
+	if (!OnSwipeMatchCheckShouldOccurTest(10))
+		return false;
+	if (!OnSwipeMatchCheckShouldOccurTest(60))
+		return false;
 	return true;
 }
 
@@ -197,7 +222,7 @@ bool TestUtils::AreIdenticalExcept(const BlockMatrix& currentMatrix, const Block
 				const auto currentBlock = currentMatrix.At(i, j);
 				const auto originalBlock = originalMatrix.At(i, j);
 				if (currentBlock != originalBlock) {
-					UE_LOG(LogTemp, Error, TEXT("After swipe, block (type: %d) at (%d, %d) differs from original block (type: %d)"),
+					UE_LOG(LogTemp, Error, TEXT("Block (type: %d) at (%d, %d) differs from original block (type: %d)"),
 						currentBlock, i, j, originalBlock);
 					return false;
 				}

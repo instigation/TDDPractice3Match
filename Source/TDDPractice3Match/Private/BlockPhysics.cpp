@@ -27,12 +27,14 @@ BlockPhysics::~BlockPhysics()
 
 void BlockPhysics::Tick(float deltaSeconds)
 {
+	elapsedTime += deltaSeconds;
+	UE_LOG(LogTemp, Display, TEXT("Tick start. Elapsed time: %f"), elapsedTime);
 	bool needToCheckMatch = false;
 	// Tick actions
 	for (auto& block : blocks) {
 		block.currentAction->Tick(deltaSeconds);
 		if (block.currentAction->IsJustCompleted()) {
-			UE_LOG(LogTemp, Display, TEXT("action completed. type: %d"), block.currentAction->GetType());
+			UE_LOG(LogTemp, Display, TEXT("action completed. type: %s"), *PrettyPrint(block.currentAction->GetType()));
 		}
 		if (block.currentAction->ShouldCheckMatch()) {
 			needToCheckMatch = true;
@@ -268,7 +270,7 @@ void SwipeMoveBlockAction::Tick(float deltaSeconds)
 	else {
 		auto moveDirection = FVector2D(destPos - initialPos);
 		moveDirection.Normalize();
-		position += moveDirection * BlockPhysics::SWIPE_MOVE_SPEED;
+		position += moveDirection * moveDistance;
 	}
 }
 
@@ -306,5 +308,23 @@ void SwipeReturnBlockAction::Tick(float deltaSeconds)
 		auto moveDirection = FVector2D(destPos - initialPos);
 		moveDirection.Normalize();
 		position += moveDirection * BlockPhysics::SWIPE_MOVE_SPEED;
+	}
+}
+
+FString PrettyPrint(ActionType actionType)
+{
+	switch (actionType) {
+	case ActionType::Idle:
+		return TEXT("Idle");
+	case ActionType::SwipeMove:
+		return TEXT("SwipeMove");
+	case ActionType::SwipeReturn:
+		return TEXT("SwipeReturn");
+	case ActionType::Fall:
+		return TEXT("Fall");
+	case ActionType::GetsDestroyed:
+		return TEXT("GetsDestroyed");
+	default:
+		return TEXT("");
 	}
 }
