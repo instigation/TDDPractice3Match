@@ -4,3 +4,8 @@
 
 #include "CoreMinimal.h"
 
+class FTDDPractice3MatchModuleImpl : public FDefaultGameModuleImpl {
+public:
+	void StartupModule() override;
+	void ShutdownModule() override;
+};
