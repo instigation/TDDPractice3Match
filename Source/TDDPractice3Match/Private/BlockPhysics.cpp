@@ -3,7 +3,8 @@
 #include "../Public/BlockPhysics.h"
 #include "GenericPlatform/GenericPlatformMath.h"
 
-BlockPhysics::BlockPhysics(const BlockMatrix& blockMatrix)
+BlockPhysics::BlockPhysics(const BlockMatrix& blockMatrix, TFunction<int(void)> newBlockGenerator)
+	:newBlockGenerator(newBlockGenerator)
 {
 	const auto block2DArray = blockMatrix.GetBlock2DArray();
 	numRows = block2DArray.Num();
@@ -30,70 +31,140 @@ void BlockPhysics::Tick(float deltaSeconds)
 	elapsedTime += deltaSeconds;
 	UE_LOG(LogTemp, Display, TEXT("Tick start. Elapsed time: %f"), elapsedTime);
 	bool needToCheckMatch = false;
-	// Tick actions
+	TickBlockActions(deltaSeconds);
+	auto thereIsAMatch = false;
+	if (ShouldCheckMatch()) {
+		thereIsAMatch = CheckAndProcessMatch();
+	}
+	RemoveDeadBlocks();
+	ChangeCompletedActionsToNextActions(thereIsAMatch);
+	SetFallingActionsAndGenerateNewBlocks();
+}
+
+void BlockPhysics::TickBlockActions(float deltaSeconds)
+{
 	for (auto& block : blocks) {
 		block.currentAction->Tick(deltaSeconds);
 		if (block.currentAction->IsJustCompleted()) {
 			UE_LOG(LogTemp, Display, TEXT("action completed. type: %s"), *PrettyPrint(block.currentAction->GetType()));
 		}
-		if (block.currentAction->ShouldCheckMatch()) {
-			needToCheckMatch = true;
-		}
 	}
-	// Check match
-	auto thereIsAMatch = false;
-	if (needToCheckMatch) {
-		UE_LOG(LogTemp, Display, TEXT("match check"));
-		auto blockMatrix = GetBlockMatrix();
-		thereIsAMatch = !blockMatrix.HasNoMatch();
-		if (thereIsAMatch) {
-			UE_LOG(LogTemp, Display, TEXT("match occured"));
-			blockMatrix.ProcessMatch();
-			UpdateBlockStatus(blockMatrix);
-		}
+}
+
+bool BlockPhysics::ShouldCheckMatch()
+{
+	for (auto& block : blocks) {
+		if (block.currentAction->ShouldCheckMatch())
+			return true;
 	}
-	// Remove dead blocks
+	return false;
+}
+
+bool BlockPhysics::CheckAndProcessMatch()
+{
+	UE_LOG(LogTemp, Display, TEXT("match check"));
+	auto blockMatrix = GetBlockMatrix();
+	auto thereIsAMatch = !blockMatrix.HasNoMatch();
+	if (thereIsAMatch) {
+		UE_LOG(LogTemp, Display, TEXT("match occured"));
+		blockMatrix.ProcessMatch();
+		UpdateBlockStatus(blockMatrix);
+	}
+	return thereIsAMatch;
+}
+
+void BlockPhysics::RemoveDeadBlocks()
+{
 	blocks.RemoveAll([](const BlockPhysicalStatus& target) -> bool {
 		return target.currentAction->ShouldBeRemoved();
 		});
-	// Set next action
+}
+
+void BlockPhysics::ChangeCompletedActionsToNextActions(bool thereIsAMatch)
+{
 	for (auto& block : blocks) {
 		if (block.currentAction->IsJustCompleted()) {
 			block.currentAction = block.currentAction->GetNextAction(thereIsAMatch);
 		}
 	}
-	// Set blocks to falling && Generate new blocks
+}
+
+void BlockPhysics::SetFallingActionsAndGenerateNewBlocks()
+{
+	class BlocksInColumn {
+	public:
+		BlocksInColumn(BlockPhysics& blockPhysics, int col) : blockPhysics(blockPhysics), col(col) {
+			for (int row = 0; row < blockPhysics.GetNumRows(); row++) {
+				auto pBlockStatus = blockPhysics.GetBlockAt(FIntPoint{ row, col });
+				if (pBlockStatus != nullptr)
+					rowIndicesOfBlocks.Add(row);
+			}
+		}
+		bool IsEmpty() const { return rowIndicesOfBlocks.Num() == 0; }
+		BlockPhysicalStatus& PopLowest() {
+			const auto lowestRow = rowIndicesOfBlocks.Pop();
+			auto pBlockStatus = blockPhysics.GetBlockAt(FIntPoint{ lowestRow, col });
+			if (pBlockStatus == nullptr)
+				UE_LOG(LogTemp, Error, TEXT("Queryed GetBlockAt with non-empty location and got nullptr: (%d, %d)"), lowestRow, col);
+			return *pBlockStatus;
+		}
+	private:
+		BlockPhysics& blockPhysics;
+		int col;
+		TArray<int> rowIndicesOfBlocks;
+	};
+
+	class PositionsInColumn {
+	public:
+		PositionsInColumn(int colIndex, int lowestRow) : col(colIndex), lowestRow(lowestRow) {}
+		bool IsEmpty() const {
+			return lowestRow < 0;
+		}
+		FIntPoint PopLowest() {
+			return FIntPoint{ lowestRow--, col };
+		}
+		int col;
+		int lowestRow;
+	};
+
 	for (int col = 0; col < numCols; col++) {
-		if (NumBlocksInColumn(col) < numCols) {
-			UE_LOG(LogTemp, Display, TEXT("Generating blocks to fill the empty cells.."));
-			int destinationRowIndex = numRows - 1;
-			int blockToFallRowIndex = numRows - 1;
-			while (destinationRowIndex >= 0) {
-				if ((blockToFallRowIndex >= 0) && IsEmpty(FIntPoint{ blockToFallRowIndex, col })) {
-					blockToFallRowIndex--;
-					continue;
-				}
-				else {
-					if (blockToFallRowIndex < destinationRowIndex) {
-						const auto blockToFallPos = FIntPoint{ blockToFallRowIndex, col };
-						const auto destinationPos = FIntPoint{ destinationRowIndex, col };
-						auto blockToFall = GetBlockAt(blockToFallPos);
-						if (blockToFallRowIndex < 0) {
-							blocks.Add(BlockPhysicalStatus(GetRandomBlock(), blockToFallPos, MakeUnique<FallingBlockAction>(blockToFallPos, destinationPos)));
-						}
-						else if (blockToFall == nullptr) {
-							UE_LOG(LogTemp, Warning, TEXT("Queryed GetBlockAt with non-empty location and got nullptr: (%d, %d)"), blockToFallRowIndex, col);
-						}
-						else {
-							blockToFall->currentAction = MakeUnique<FallingBlockAction>(blockToFallPos, destinationPos);
-						}
-					}
-					destinationRowIndex--;
-					blockToFallRowIndex--;
-				}
+		if (NumOccupiedCellsInColumn(col) == numRows)
+			continue;
+
+		auto blocksInCol = BlocksInColumn(*this, col);
+		auto positionsInCol = PositionsInColumn(col, numRows-1);
+		auto topRow = -1;
+		while (!positionsInCol.IsEmpty()) {
+			auto destination = positionsInCol.PopLowest();
+			if (blocksInCol.IsEmpty()) {
+				auto newBlock = BlockPhysicalStatus(GetRandomBlock(), FIntPoint{ topRow--, col });
+				MakeBlockFallToDestination(newBlock, destination);
+				blocks.Add(MoveTemp(newBlock));
+			}
+			else {
+				auto& currentBlock = blocksInCol.PopLowest();
+				if (currentBlock.currentAction->GetPosition() != destination)
+					MakeBlockFallToDestination(currentBlock, destination);
 			}
 		}
 	}
+}
+
+
+int BlockPhysics::NumOccupiedCellsInColumn(int colIndex) const
+{
+	auto count = 0;
+	auto occupiedRowIndices = TSet<int>();
+	for (const auto& block : blocks) {
+		if (FGenericPlatformMath::Abs(block.currentAction->GetOccupiedPosition().Y - colIndex) < DELTA_DISTANCE) {
+			occupiedRowIndices.Add(ToInt(block.currentAction->GetOccupiedPosition().X));
+			count++;
+		}
+	}
+	if (count != occupiedRowIndices.Num()) {
+		UE_LOG(LogTemp, Warning, TEXT("'count' and 'occupied row indices count' differ"));
+	}
+	return count;
 }
 
 void BlockPhysics::RecieveSwipeInput(FIntPoint swipeStart, FIntPoint swipeEnd)
@@ -196,20 +267,10 @@ void BlockPhysics::UpdateBlockStatus(const BlockMatrix& blockMatrix)
 	}
 }
 
-int BlockPhysics::NumBlocksInColumn(int colIndex)
+void BlockPhysics::MakeBlockFallToDestination(BlockPhysicalStatus& blockStatus, FIntPoint destination)
 {
-	auto count = 0;
-	auto occupiedRowIndices = TSet<int>();
-	for (const auto& block : blocks) {
-		if (FGenericPlatformMath::Abs(block.currentAction->GetOccupiedPosition().Y - colIndex) < DELTA_DISTANCE) {
-			occupiedRowIndices.Add(ToInt(block.currentAction->GetOccupiedPosition().X));
-			count++;
-		}
-	}
-	if (count != occupiedRowIndices.Num()) {
-		UE_LOG(LogTemp, Warning, TEXT("'count' and 'occupied row indices count' differ"));
-	}
-	return count;
+	const auto initialPosition = ToFIntPoint(blockStatus.currentAction->GetPosition());
+	blockStatus.currentAction = MakeUnique<FallingBlockAction>(initialPosition, destination);
 }
 
 FIntPoint BlockPhysics::ToFIntPoint(FVector2D position)
@@ -224,7 +285,8 @@ int BlockPhysics::ToInt(float value)
 
 Block BlockPhysics::GetRandomBlock()
 {
-	return Block(rand() % static_cast<int>(Block::MAX));
+	const auto normalBlocks = GetNormalBlocks();
+	return normalBlocks[newBlockGenerator() % normalBlocks.Num()];
 }
 
 BlockPhysicalStatus::BlockPhysicalStatus(Block block, FIntPoint initialPosition, TUniquePtr<BlockAction>&& action)
@@ -288,6 +350,23 @@ FallingBlockAction::FallingBlockAction(FIntPoint initialPos, FIntPoint destPos)
 	:BlockAction(initialPos), initialPos(initialPos), destPos(destPos)
 {
 
+}
+
+void FallingBlockAction::Tick(float deltaSeconds)
+{
+	const auto averageSpeed = currentSpeed + deltaSeconds * BlockPhysics::GRAVITY_ACCELERATION / 2.f;
+	const auto fallDistance = averageSpeed * deltaSeconds;
+	const auto distanceLeftToGo = (FVector2D(destPos) - position).Size();
+	if (distanceLeftToGo < fallDistance) {
+		position = destPos;
+		isJustCompleted = true;
+	}
+	else {
+		auto fallDirection = FVector2D(destPos - initialPos);
+		fallDirection.Normalize();
+		position += fallDirection * fallDistance;
+	}
+	currentSpeed += deltaSeconds * BlockPhysics::GRAVITY_ACCELERATION;
 }
 
 SwipeReturnBlockAction::SwipeReturnBlockAction(FIntPoint initialPos, FIntPoint destPos)

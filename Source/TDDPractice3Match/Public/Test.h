@@ -16,4 +16,5 @@ public:
 	static bool IsCorrectlyEmpty(const BlockPhysics& blockPhysics, const TArray<FIntPoint>& onlyPositionsThatShouldBeEmpty);
 	static bool AreNewBlocksSpawnedAtTop(const BlockPhysics& blockPhysics, const TArray<int>& newBlockSpawnExpectedCols);
 	static bool AreIdenticalExcept(const BlockMatrix& blockMatrix1, const BlockMatrix& blockMatrix2, const TArray<FIntPoint>& exceptionalPositions);
+	static bool AllBlocksAreFilled(const BlockMatrix& blockMatrix);
 };

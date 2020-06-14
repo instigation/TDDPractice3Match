@@ -103,6 +103,13 @@ TArray<TPair<FIntPoint, Formation>> BlockMatrix::GetMatchedLocationAndFormations
 	return ret;
 }
 
+TArray<Block> GetNormalBlocks() {
+	auto ret = TArray<Block>();
+	for (int i = static_cast<int>(Block::MIN) + 1; i < static_cast<int>(Block::MAX_NORMAL); i++)
+		ret.Add(Block(i));
+	return ret;
+}
+
 BlockColor GetColor(Block block)
 {
 	return BlockColor(static_cast<int>(block));

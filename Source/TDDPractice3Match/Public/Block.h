@@ -7,14 +7,19 @@
  *
  */
 enum class TDDPRACTICE3MATCH_API Block {
+    MIN,
     ZERO,
     ONE,
     TWO,
     THREE,
     FOUR,
+    MAX_NORMAL,
+    MAX_SPECIAL,
     INVALID,
     MAX
 };
+
+TArray<Block> GetNormalBlocks();
 
 enum class TDDPRACTICE3MATCH_API BlockColor {
     ZERO,

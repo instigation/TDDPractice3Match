@@ -80,15 +80,16 @@ private:
 class FallingBlockAction : public BlockAction {
 public:
 	FallingBlockAction(FIntPoint initialPos, FIntPoint destPos);
-	virtual void Tick(float deltaSeconds) override {}
-	virtual bool IsJustCompleted() const override { return false; }
+	virtual void Tick(float deltaSeconds) override;
+	virtual bool IsJustCompleted() const override { return isJustCompleted; }
 	virtual bool ShouldCheckMatch() const { return IsJustCompleted(); }
-	virtual bool IsEligibleForMatching() const { return isJustCompleted; }
+	virtual bool IsEligibleForMatching() const { return IsJustCompleted(); }
 	virtual TUniquePtr<BlockAction> GetNextAction(bool thereIsAMatch) const { return MakeUnique<IdleBlockAction>(position); }
 
 	virtual ActionType GetType() const { return ActionType::Fall; }
 private:
 	FIntPoint initialPos, destPos;
+	float currentSpeed = 0.f;
 	bool isJustCompleted = false;
 };
 
@@ -132,12 +133,18 @@ class BlockMatrix;
 class TDDPRACTICE3MATCH_API BlockPhysics
 {
 public:
-	BlockPhysics(const BlockMatrix& blockMatrix);
+	BlockPhysics(const BlockMatrix& blockMatrix, TFunction<int(void)> newBlockGenerator = rand);
 	BlockPhysics(const BlockPhysics& other) = delete;
 	BlockPhysics(BlockPhysics&& other);
 	~BlockPhysics();
 
 	void Tick(float deltaSeconds);
+	void TickBlockActions(float deltaSeconds);
+	bool ShouldCheckMatch();
+	bool CheckAndProcessMatch();
+	void RemoveDeadBlocks();
+	void ChangeCompletedActionsToNextActions(bool thereIsAMatch);
+	void SetFallingActionsAndGenerateNewBlocks();
 
 	void RecieveSwipeInput(FIntPoint swipeStart, FIntPoint swipeEnd);
 
@@ -145,6 +152,7 @@ public:
 	constexpr static float DELTA_COSINE = 0.001f;
 	constexpr static float DELTA_DISTANCE = 0.0001f;
 	constexpr static float GRID_SIZE = 1.0f;
+	constexpr static float GRAVITY_ACCELERATION = 10.0f;
 	constexpr static float SWIPE_MOVE_SPEED = 1.0f;
 	constexpr static float DESTROY_ANIMATION_TIME = 0.2f;
 
@@ -160,16 +168,21 @@ public:
 private:
 	const BlockPhysicalStatus* GetBlockAt(FIntPoint position) const;
 	BlockPhysicalStatus* GetBlockAt(FIntPoint position);
+
 	void UpdateBlockStatus(const BlockMatrix& blockMatrix);
 
-	int NumBlocksInColumn(int colIndex);
+	int NumOccupiedCellsInColumn(int colIndex) const;
+	void MakeBlockFallToDestination(BlockPhysicalStatus& blockStatus, FIntPoint destination);
 
 	static FIntPoint ToFIntPoint(FVector2D position);
 	static int ToInt(float value);
-	static Block GetRandomBlock();
+	Block GetRandomBlock();
 
 	TArray<BlockPhysicalStatus> blocks;
 	int numRows = 0;
 	int numCols = 0;
 	float elapsedTime = 0.0f;
+	TFunction<int(void)> newBlockGenerator;
+
+
 };

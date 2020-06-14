@@ -75,7 +75,19 @@ bool OnSwipeMatchCheckShouldOccurTest(int tickDivider) {
 	const auto swipeStart = FIntPoint{ 0,3 };
 	const auto swipeEnd = FIntPoint{ 0,2 };
 	auto blockMatrix = TestUtils::blockMatrix5x5;
-	auto blockPhysics = BlockPhysics(blockMatrix);
+	auto newBlockCount = 0;
+	auto newBlockGenerator = [&newBlockCount]() -> int {
+		const auto blockOne = static_cast<int>(Block::ONE);
+		const auto blockTwo = static_cast<int>(Block::TWO);
+		const auto newBlocks = TArray<int>{ blockOne, blockOne, blockTwo };
+		if(newBlockCount < newBlocks.Num())
+			return newBlocks[newBlockCount++];
+		else {
+			UE_LOG(LogTemp, Error, TEXT("More than three blocks are randomly generated"));
+			return 0;
+		}
+	};
+	auto blockPhysics = BlockPhysics(blockMatrix, newBlockGenerator);
 
 	// Swipe
 	blockPhysics.RecieveSwipeInput(swipeStart, swipeEnd);
@@ -110,6 +122,17 @@ bool OnSwipeMatchCheckShouldOccurTest(int tickDivider) {
 		return false;
 	const auto shouldBeSpawnedCols = TArray<int>{ 0, 1, 2 };
 	if (!TestUtils::AreNewBlocksSpawnedAtTop(blockPhysics, shouldBeSpawnedCols))
+		return false;
+
+	// After sufficient time to fall
+	const auto fallTime = FMath::Sqrt(2 * blockPhysics.GRID_SIZE / blockPhysics.GRAVITY_ACCELERATION);
+	for (int i = 0; i < tickDivider - 1; i++) {
+		blockPhysics.Tick(fallTime / tickDivider);
+	}
+	blockPhysics.Tick(fallTime / tickDivider + TestUtils::veryShortTime);
+	if (!TestUtils::AreIdenticalExcept(blockPhysics.GetBlockMatrix(), blockMatrix, matchedAndSwipedBlockPositions))
+		return false;
+	if (!TestUtils::AllBlocksAreFilled(blockPhysics.GetBlockMatrix()))
 		return false;
 
 	return true;
@@ -226,6 +249,22 @@ bool TestUtils::AreIdenticalExcept(const BlockMatrix& currentMatrix, const Block
 						currentBlock, i, j, originalBlock);
 					return false;
 				}
+			}
+		}
+	}
+	return true;
+}
+
+bool TestUtils::AllBlocksAreFilled(const BlockMatrix& blockMatrix)
+{
+	const auto numRow = blockMatrix.GetNumRows();
+	const auto numCol = blockMatrix.GetNumCols();
+	const auto block2DArray = blockMatrix.GetBlock2DArray();
+	for (int i = 0; i < numRow; i++) {
+		for (int j = 0; j < numCol; j++) {
+			if (block2DArray[i][j] == Block::INVALID) {
+				UE_LOG(LogTemp, Error, TEXT("Block at (%d, %d) is invalid, where all blocks are expected to be filled"), i, j);
+				return false;
 			}
 		}
 	}
