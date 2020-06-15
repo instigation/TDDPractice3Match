@@ -30,7 +30,6 @@ void BlockPhysics::Tick(float deltaSeconds)
 {
 	elapsedTime += deltaSeconds;
 	UE_LOG(LogTemp, Display, TEXT("Tick start. Elapsed time: %f"), elapsedTime);
-	bool needToCheckMatch = false;
 	TickBlockActions(deltaSeconds);
 	auto thereIsAMatch = false;
 	if (ShouldCheckMatch()) {
@@ -68,7 +67,7 @@ bool BlockPhysics::CheckAndProcessMatch()
 	if (thereIsAMatch) {
 		UE_LOG(LogTemp, Display, TEXT("match occured"));
 		blockMatrix.ProcessMatch();
-		UpdateBlockStatus(blockMatrix);
+		StartDestroyingMatchedBlocksAccordingTo(blockMatrix);
 	}
 	return thereIsAMatch;
 }
@@ -249,20 +248,22 @@ BlockMatrix BlockPhysics::GetBlockMatrix() const
 	return BlockMatrix(numRows, numCols, blockMatrix);
 }
 
-void BlockPhysics::UpdateBlockStatus(const BlockMatrix& blockMatrix)
+void BlockPhysics::StartDestroyingMatchedBlocksAccordingTo(const BlockMatrix& matchProcessedBlockMatrix)
 {
-	const auto updatedBlocks = blockMatrix.GetBlock2DArray();
+	const auto matchProcessedBlocks = matchProcessedBlockMatrix.GetBlock2DArray();
 	for (int i = 0; i < numRows; i++) {
 		for (int j = 0; j < numCols; j++) {
-			if (updatedBlocks[i][j] == Block::INVALID) {
-				auto blockStatus = GetBlockAt(FIntPoint{ i, j });
-				if (blockStatus == nullptr) {
-					UE_LOG(LogTemp, Warning, TEXT("block to update does not exist at (%d, %d)"), i, j);
-					continue;
-				}
-				UE_LOG(LogTemp, Display, TEXT("block to destroy at (%d, %d)"), i, j);
-				blockStatus->currentAction = MakeUnique<GetsDestroyedBlockAction>(blockStatus->currentAction->GetPosition());
+			const auto isBlockDestroyed = (matchProcessedBlocks[i][j] == Block::INVALID);
+			if (!isBlockDestroyed)
+				continue;
+
+			auto blockStatus = GetBlockAt(FIntPoint{ i, j });
+			if (blockStatus == nullptr) {
+				UE_LOG(LogTemp, Warning, TEXT("block to update does not exist at (%d, %d)"), i, j);
+				continue;
 			}
+			UE_LOG(LogTemp, Display, TEXT("block to destroy at (%d, %d)"), i, j);
+			blockStatus->currentAction = MakeUnique<GetsDestroyedBlockAction>(blockStatus->currentAction->GetPosition());
 		}
 	}
 }

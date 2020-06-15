@@ -169,7 +169,7 @@ private:
 	const BlockPhysicalStatus* GetBlockAt(FIntPoint position) const;
 	BlockPhysicalStatus* GetBlockAt(FIntPoint position);
 
-	void UpdateBlockStatus(const BlockMatrix& blockMatrix);
+	void StartDestroyingMatchedBlocksAccordingTo(const BlockMatrix& blockMatrix);
 
 	int NumOccupiedCellsInColumn(int colIndex) const;
 	void MakeBlockFallToDestination(BlockPhysicalStatus& blockStatus, FIntPoint destination);
