@@ -127,8 +127,10 @@ void BlockPhysics::SetFallingActionsAndGenerateNewBlocks()
 	};
 
 	for (int col = 0; col < numCols; col++) {
-		if (NumOccupiedCellsInColumn(col) == numRows)
+		if (NumOccupiedCellsInColumn(col) == numRows) {
+			UE_LOG(LogTemp, Display, TEXT("Column %d has all cells occupied"), col);
 			continue;
+		}
 
 		auto blocksInCol = BlocksInColumn(*this, col);
 		auto positionsInCol = PositionsInColumn(col, numRows-1);
@@ -137,6 +139,7 @@ void BlockPhysics::SetFallingActionsAndGenerateNewBlocks()
 			auto destination = positionsInCol.PopLowest();
 			if (blocksInCol.IsEmpty()) {
 				auto newBlock = BlockPhysicalStatus(GetRandomBlock(), FIntPoint{ topRow--, col });
+				UE_LOG(LogTemp, Display, TEXT("New block generated at: (%d, %d)"), topRow, col);
 				MakeBlockFallToDestination(newBlock, destination);
 				blocks.Add(MoveTemp(newBlock));
 			}
@@ -188,16 +191,35 @@ bool BlockPhysics::ExistsBlockBetween(FIntPoint startPos, FIntPoint endPos) cons
 {
 	for (const auto& block : blocks) {
 		const auto blockPos = block.currentAction->GetPosition();
-		auto startToEnd = FVector2D(endPos - startPos);
-		if (startToEnd.IsNearlyZero(DELTA_DISTANCE))
+		auto blockPosToStart = FVector2D(startPos) - blockPos;
+		if (blockPosToStart.IsNearlyZero(DELTA_DISTANCE)) {
+			UE_LOG(LogTemp, Display, TEXT("blockPosToStart Nearly zero"));
 			return true;
-		startToEnd.Normalize();
-		auto startToBlockPos = FVector2D(blockPos - startPos);
-		if (startToBlockPos.IsNearlyZero(DELTA_DISTANCE))
+		}
+		blockPosToStart.Normalize();
+		auto blockPosToEnd = FVector2D(endPos) - blockPos;
+		if (blockPosToEnd.IsNearlyZero(DELTA_DISTANCE)) {
+			UE_LOG(LogTemp, Display, TEXT("blockPosToEnd Nearly zero. block (%f,%f), end (%d,%d)"),
+				blockPos.X, blockPos.Y, endPos.X, endPos.Y);
 			return true;
-		startToBlockPos.Normalize();
-		const auto dotProduct = FVector2D::DotProduct(startToEnd, startToBlockPos);
-		if (FGenericPlatformMath::Abs(dotProduct + 1) < DELTA_COSINE)
+		}
+		blockPosToEnd.Normalize();
+		const auto dotProduct = FVector2D::DotProduct(blockPosToStart, blockPosToEnd);
+		if (FGenericPlatformMath::Abs(dotProduct + 1) < DELTA_COSINE) {
+			UE_LOG(LogTemp, Display, TEXT("start:(%d,%d),end:(%d,%d),dot:%f"),
+				startPos.X, startPos.Y, endPos.X, endPos.Y, dotProduct);
+			return true;
+		}
+	}
+	return false;
+}
+
+bool BlockPhysics::ExistsBlockNear(FIntPoint searchPosition, float threshold) const
+{
+	for (const auto& block : blocks) {
+		const auto blockPos = block.currentAction->GetPosition();
+		const auto distance = (blockPos - FVector2D(searchPosition)).Size();
+		if (distance < threshold)
 			return true;
 	}
 	return false;

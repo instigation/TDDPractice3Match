@@ -15,6 +15,9 @@ public:
 	static bool IsCorrectlyGettingDestroyed(const BlockPhysics& blockPhysics, const TArray<FIntPoint>& onlyPositionsThatShouldBeDestroyed);
 	static bool IsCorrectlyEmpty(const BlockPhysics& blockPhysics, const TArray<FIntPoint>& onlyPositionsThatShouldBeEmpty);
 	static bool AreNewBlocksSpawnedAtTop(const BlockPhysics& blockPhysics, const TArray<int>& newBlockSpawnExpectedCols);
+	static bool AreNewBlocksSpawned(const BlockPhysics& blockPhysics, int colToInspect, int expectedNewBlocksCount);
 	static bool AreIdenticalExcept(const BlockMatrix& blockMatrix1, const BlockMatrix& blockMatrix2, const TArray<FIntPoint>& exceptionalPositions);
 	static bool AllBlocksAreFilled(const BlockMatrix& blockMatrix);
+
+	static float GetFallTime(const BlockPhysics& blockPhysics, int howManyGridsToFall);
 };

@@ -125,17 +125,20 @@ bool OnSwipeMatchCheckShouldOccurTest(int tickDivider) {
 		return false;
 
 	// After sufficient time to fall
-	const auto fallTime = FMath::Sqrt(2 * blockPhysics.GRID_SIZE / blockPhysics.GRAVITY_ACCELERATION);
 	for (int i = 0; i < tickDivider - 1; i++) {
-		blockPhysics.Tick(fallTime / tickDivider);
+		blockPhysics.Tick(TestUtils::GetFallTime(blockPhysics, 1) / tickDivider);
 	}
-	blockPhysics.Tick(fallTime / tickDivider + TestUtils::veryShortTime);
+	blockPhysics.Tick(TestUtils::GetFallTime(blockPhysics, 1) / tickDivider + TestUtils::veryShortTime);
 	if (!TestUtils::AreIdenticalExcept(blockPhysics.GetBlockMatrix(), blockMatrix, matchedAndSwipedBlockPositions))
 		return false;
 	if (!TestUtils::AllBlocksAreFilled(blockPhysics.GetBlockMatrix()))
 		return false;
 
 	return true;
+}
+
+float TestUtils::GetFallTime(const BlockPhysics& blockPhysics, int howManyGridsToFall) {
+	return FMath::Sqrt(2 * blockPhysics.GRID_SIZE * howManyGridsToFall / blockPhysics.GRAVITY_ACCELERATION);
 }
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(OnSwipeMatchCheckShouldOccur, "Board.OnSwipe.Match should occur when there's a match", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
@@ -217,7 +220,7 @@ bool TestUtils::AreNewBlocksSpawnedAtTop(const BlockPhysics& blockPhysics, const
 {
 	for (int colIndex = 0; colIndex < blockPhysics.GetNumRows(); colIndex++) {
 		const auto pos = FIntPoint{ -1,colIndex };
-		const auto isNewBlockCreated = !blockPhysics.IsEmpty(pos) || blockPhysics.ExistsBlockBetween(pos, pos + FIntPoint{ 1,0 });
+		const auto isNewBlockCreated = !blockPhysics.IsEmpty(pos) || blockPhysics.ExistsBlockNear(pos, blockPhysics.GRID_SIZE/3.f);
 		if (newBlockSpawnExpectedCols.Contains(colIndex)) {
 			if (!isNewBlockCreated) {
 				UE_LOG(LogTemp, Error, TEXT("New blocks are not created at (%d, %d)"), pos.X, pos.Y);
@@ -229,6 +232,18 @@ bool TestUtils::AreNewBlocksSpawnedAtTop(const BlockPhysics& blockPhysics, const
 				UE_LOG(LogTemp, Error, TEXT("New blocks are created at (%d, %d)"), pos.X, pos.Y);
 				return false;
 			}
+		}
+	}
+	return true;
+}
+
+bool TestUtils::AreNewBlocksSpawned(const BlockPhysics& blockPhysics, int colToInspect, int expectedNewBlocksCount)
+{
+	for (int i = -1; i >= -expectedNewBlocksCount; i--) {
+		if (!blockPhysics.ExistsBlockNear(FIntPoint{ i, colToInspect }, blockPhysics.GRID_SIZE/3.f)) {
+			UE_LOG(LogTemp, Error, TEXT("Block expected to be exist at (%d,%d) but not present"),
+				i, colToInspect);
+			return false;
 		}
 	}
 	return true;
@@ -268,5 +283,42 @@ bool TestUtils::AllBlocksAreFilled(const BlockMatrix& blockMatrix)
 			}
 		}
 	}
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(MultipleNewBlocksShouldBeGenerated, "Board.OnSwipe.Multiple new blocks should be generated if needed", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool MultipleNewBlocksShouldBeGenerated::RunTest(const FString& Parameters) {
+	// Setup
+	const auto swipeColumn = 2;
+	const auto swipeStart = FIntPoint{ 3,swipeColumn };
+	const auto swipeEnd = FIntPoint{ 2,swipeColumn };
+	auto blockMatrix = TestUtils::blockMatrix5x5;
+	auto newBlockCount = 0;
+	auto newBlockGenerator = [&newBlockCount]() -> int {
+		const auto blockOne = static_cast<int>(Block::ONE);
+		const auto blockTwo = static_cast<int>(Block::TWO);
+		const auto newBlocks = TArray<int>{ blockOne, blockOne, blockTwo };
+		if (newBlockCount < newBlocks.Num())
+			return newBlocks[newBlockCount++];
+		else {
+			UE_LOG(LogTemp, Error, TEXT("More than three blocks are randomly generated"));
+			return 0;
+		}
+	};
+	auto blockPhysics = BlockPhysics(blockMatrix, newBlockGenerator);
+
+	// Swipe
+	blockPhysics.RecieveSwipeInput(swipeStart, swipeEnd);
+	// After swipe move end
+	blockPhysics.Tick((blockPhysics.GRID_SIZE / blockPhysics.SWIPE_MOVE_SPEED) + TestUtils::veryShortTime);
+	// After destroy animation end
+	blockPhysics.Tick(blockPhysics.DESTROY_ANIMATION_TIME + TestUtils::veryShortTime);
+	const auto expectedNewBlocksCount = 3;
+	if (!TestUtils::AreNewBlocksSpawned(blockPhysics, swipeColumn, expectedNewBlocksCount))
+		return false;
+	// After falling end
+	blockPhysics.Tick(TestUtils::GetFallTime(blockPhysics, 3) + TestUtils::veryShortTime);
+	if (!TestUtils::AllBlocksAreFilled(blockPhysics.GetBlockMatrix()))
+		return false;
 	return true;
 }

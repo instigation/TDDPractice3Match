@@ -158,6 +158,7 @@ public:
 
 	bool IsEmpty(FIntPoint position) const;
 	bool ExistsBlockBetween(FIntPoint startPos, FIntPoint endPos) const;
+	bool ExistsBlockNear(FIntPoint searchPosition, float threshold) const;
 	bool IsPlayingDestroyAnimAt(FIntPoint position) const;
 	bool IsIdleAt(FIntPoint position) const;
 
