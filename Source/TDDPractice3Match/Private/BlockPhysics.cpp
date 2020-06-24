@@ -11,13 +11,13 @@ BlockPhysics::BlockPhysics(const BlockMatrix& blockMatrix, TFunction<int(void)> 
 	numCols = numRows == 0 ? 0 : block2DArray[0].Num();
 	for (int i = 0; i < numRows; i++) {
 		for (int j = 0; j < numCols; j++) {
-			blocks.Add(BlockPhysicalStatus(block2DArray[i][j], FIntPoint{ i, j }));
+			physicalBlocks.Add(PhysicalBlock(block2DArray[i][j], FIntPoint{ i, j }));
 		}
 	}
 }
 
 BlockPhysics::BlockPhysics(BlockPhysics&& other)
-	:blocks(MoveTemp(other.blocks)), numRows(other.numRows), numCols(other.numCols)
+	:physicalBlocks(MoveTemp(other.physicalBlocks)), numRows(other.numRows), numCols(other.numCols)
 {
 
 }
@@ -42,7 +42,7 @@ void BlockPhysics::Tick(float deltaSeconds)
 
 void BlockPhysics::TickBlockActions(float deltaSeconds)
 {
-	for (auto& block : blocks) {
+	for (auto& block : physicalBlocks) {
 		block.currentAction->Tick(deltaSeconds);
 		if (block.currentAction->IsJustCompleted()) {
 			UE_LOG(LogTemp, Display, TEXT("action completed. type: %s"), *PrettyPrint(block.currentAction->GetType()));
@@ -52,7 +52,7 @@ void BlockPhysics::TickBlockActions(float deltaSeconds)
 
 bool BlockPhysics::ShouldCheckMatch()
 {
-	for (auto& block : blocks) {
+	for (auto& block : physicalBlocks) {
 		if (block.currentAction->ShouldCheckMatch())
 			return true;
 	}
@@ -75,17 +75,17 @@ bool BlockPhysics::CheckAndProcessMatch()
 
 void BlockPhysics::RemoveDeadBlocks()
 {
-	blocks.RemoveAll([](const BlockPhysicalStatus& target) -> bool {
+	physicalBlocks.RemoveAll([](const PhysicalBlock& target) -> bool {
 		return target.currentAction->ShouldBeRemoved();
 		});
 }
 
 void BlockPhysics::ChangeCompletedActionsToNextActions(bool thereIsAMatch)
 {
-	for (auto& block : blocks) {
-		if (block.currentAction->IsJustCompleted()) {
-			block.block = block.currentAction->GetNextBlock(block.block);
-			block.currentAction = block.currentAction->GetNextAction(thereIsAMatch);
+	for (auto& physicalBlock : physicalBlocks) {
+		if (physicalBlock.currentAction->IsJustCompleted()) {
+			physicalBlock.block = physicalBlock.currentAction->GetNextBlock(physicalBlock.block);
+			physicalBlock.currentAction = physicalBlock.currentAction->GetNextAction(thereIsAMatch);
 		}
 	}
 }
@@ -102,7 +102,7 @@ void BlockPhysics::SetFallingActionsAndGenerateNewBlocks()
 			}
 		}
 		bool IsEmpty() const { return rowIndicesOfBlocks.Num() == 0; }
-		BlockPhysicalStatus& PopLowest() {
+		PhysicalBlock& PopLowest() {
 			const auto lowestRow = rowIndicesOfBlocks.Pop();
 			auto pBlockStatus = blockPhysics.GetBlockAt(FIntPoint{ lowestRow, col });
 			if (pBlockStatus == nullptr)
@@ -140,10 +140,10 @@ void BlockPhysics::SetFallingActionsAndGenerateNewBlocks()
 		while (!positionsInCol.IsEmpty()) {
 			auto destination = positionsInCol.PopLowest();
 			if (blocksInCol.IsEmpty()) {
-				auto newBlock = BlockPhysicalStatus(GetRandomBlock(), FIntPoint{ topRow--, col });
+				auto newBlock = PhysicalBlock(GetRandomBlock(), FIntPoint{ topRow--, col });
 				UE_LOG(LogTemp, Display, TEXT("New block generated at: (%d, %d)"), topRow, col);
 				MakeBlockFallToDestination(newBlock, destination);
-				blocks.Add(MoveTemp(newBlock));
+				physicalBlocks.Add(MoveTemp(newBlock));
 			}
 			else {
 				auto& currentBlock = blocksInCol.PopLowest();
@@ -159,7 +159,7 @@ int BlockPhysics::NumOccupiedCellsInColumn(int colIndex) const
 {
 	auto count = 0;
 	auto occupiedRowIndices = TSet<int>();
-	for (const auto& block : blocks) {
+	for (const auto& block : physicalBlocks) {
 		if (FGenericPlatformMath::Abs(block.currentAction->GetOccupiedPosition().Y - colIndex) < DELTA_DISTANCE) {
 			occupiedRowIndices.Add(ToInt(block.currentAction->GetOccupiedPosition().X));
 			count++;
@@ -191,7 +191,7 @@ bool BlockPhysics::IsEmpty(FIntPoint position) const
 
 bool BlockPhysics::ExistsBlockBetween(FIntPoint startPos, FIntPoint endPos) const
 {
-	for (const auto& block : blocks) {
+	for (const auto& block : physicalBlocks) {
 		const auto blockPos = block.currentAction->GetPosition();
 		auto blockPosToStart = FVector2D(startPos) - blockPos;
 		if (blockPosToStart.IsNearlyZero(DELTA_DISTANCE)) {
@@ -218,7 +218,7 @@ bool BlockPhysics::ExistsBlockBetween(FIntPoint startPos, FIntPoint endPos) cons
 
 bool BlockPhysics::ExistsBlockNear(FIntPoint searchPosition, float threshold) const
 {
-	for (const auto& block : blocks) {
+	for (const auto& block : physicalBlocks) {
 		const auto blockPos = block.currentAction->GetPosition();
 		const auto distance = (blockPos - FVector2D(searchPosition)).Size();
 		if (distance < threshold)
@@ -241,9 +241,9 @@ bool BlockPhysics::IsIdleAt(FIntPoint position) const
 	return (pBlock != nullptr) && (pBlock->currentAction->GetType() == ActionType::Idle);
 }
 
-BlockPhysicalStatus* BlockPhysics::GetBlockAt(FIntPoint position)
+PhysicalBlock* BlockPhysics::GetBlockAt(FIntPoint position)
 {
-	for (auto& block : blocks) {
+	for (auto& block : physicalBlocks) {
 		if ((block.currentAction->GetPosition() - position).SizeSquared() <= DELTA_DISTANCE) {
 			return &block;
 		}
@@ -251,9 +251,9 @@ BlockPhysicalStatus* BlockPhysics::GetBlockAt(FIntPoint position)
 	return nullptr;
 }
 
-const BlockPhysicalStatus* BlockPhysics::GetBlockAt(FIntPoint position) const
+const PhysicalBlock* BlockPhysics::GetBlockAt(FIntPoint position) const
 {
-	for (const auto& block : blocks) {
+	for (const auto& block : physicalBlocks) {
 		if ((block.currentAction->GetPosition() - position).SizeSquared() <= DELTA_DISTANCE) {
 			return &block;
 		}
@@ -264,9 +264,9 @@ const BlockPhysicalStatus* BlockPhysics::GetBlockAt(FIntPoint position) const
 BlockMatrix BlockPhysics::GetBlockMatrix() const
 {
 	auto blockMatrix = TMap<FIntPoint, Block>();
-	for (const auto& block : blocks) {
-		if (block.currentAction->IsEligibleForMatching()) {
-			blockMatrix.Add(ToFIntPoint(block.currentAction->GetPosition()), block.block);
+	for (const auto& physicalBlock : physicalBlocks) {
+		if (physicalBlock.currentAction->IsEligibleForMatching()) {
+			blockMatrix.Add(ToFIntPoint(physicalBlock.currentAction->GetPosition()), physicalBlock.block);
 		}
 	}
 	return BlockMatrix(numRows, numCols, blockMatrix);
@@ -302,7 +302,7 @@ void BlockPhysics::SetSpecialBlocksSpawnAccordingTo(const MatchResult& matchResu
 	}
 }
 
-void BlockPhysics::MakeBlockFallToDestination(BlockPhysicalStatus& blockStatus, FIntPoint destination)
+void BlockPhysics::MakeBlockFallToDestination(PhysicalBlock& blockStatus, FIntPoint destination)
 {
 	const auto initialPosition = ToFIntPoint(blockStatus.currentAction->GetPosition());
 	blockStatus.currentAction = MakeUnique<FallingBlockAction>(initialPosition, destination);
@@ -324,24 +324,24 @@ Block BlockPhysics::GetRandomBlock()
 	return normalBlocks[newBlockGenerator() % normalBlocks.Num()];
 }
 
-BlockPhysicalStatus::BlockPhysicalStatus(Block block, FIntPoint initialPosition, TUniquePtr<BlockAction>&& action)
+PhysicalBlock::PhysicalBlock(Block block, FIntPoint initialPosition, TUniquePtr<BlockAction>&& action)
 	: block(block), currentAction(MoveTemp(action)), id(++lastIssuedId)
 {
 }
 
-BlockPhysicalStatus::BlockPhysicalStatus(Block block, FIntPoint initialPosition)
+PhysicalBlock::PhysicalBlock(Block block, FIntPoint initialPosition)
 	: block(block), currentAction(MakeUnique<IdleBlockAction>(initialPosition)), id(++lastIssuedId)
 {
 
 }
 
-BlockPhysicalStatus::BlockPhysicalStatus(BlockPhysicalStatus&& other)
+PhysicalBlock::PhysicalBlock(PhysicalBlock&& other)
 	: block(other.block), currentAction(MoveTemp(other.currentAction)), id(++lastIssuedId)
 {
 
 }
 
-int BlockPhysicalStatus::lastIssuedId = -1;
+int PhysicalBlock::lastIssuedId = -1;
 
 void GetsDestroyedBlockAction::Tick(float deltaSeconds)
 {

@@ -122,12 +122,12 @@ private:
 };
 
 
-class BlockPhysicalStatus {
+class PhysicalBlock {
 public:
-	BlockPhysicalStatus(Block block, FIntPoint initialPosition);
-	BlockPhysicalStatus(Block block, FIntPoint initialPosition, TUniquePtr<BlockAction>&& action);
-	BlockPhysicalStatus(const BlockPhysicalStatus& other) = delete;
-	BlockPhysicalStatus(BlockPhysicalStatus&& other);
+	PhysicalBlock(Block block, FIntPoint initialPosition);
+	PhysicalBlock(Block block, FIntPoint initialPosition, TUniquePtr<BlockAction>&& action);
+	PhysicalBlock(const PhysicalBlock& other) = delete;
+	PhysicalBlock(PhysicalBlock&& other);
 	int GetId() const { return id; }
 	Block block;
 	TUniquePtr<BlockAction> currentAction;
@@ -179,20 +179,20 @@ public:
 	int GetNumCols() const { return numCols; }
 
 private:
-	const BlockPhysicalStatus* GetBlockAt(FIntPoint position) const;
-	BlockPhysicalStatus* GetBlockAt(FIntPoint position);
+	const PhysicalBlock* GetBlockAt(FIntPoint position) const;
+	PhysicalBlock* GetBlockAt(FIntPoint position);
 
 	void StartDestroyingMatchedBlocksAccordingTo(const MatchResult& blockMatrix);
 	void SetSpecialBlocksSpawnAccordingTo(const MatchResult& blockMatrix);
 
 	int NumOccupiedCellsInColumn(int colIndex) const;
-	void MakeBlockFallToDestination(BlockPhysicalStatus& blockStatus, FIntPoint destination);
+	void MakeBlockFallToDestination(PhysicalBlock& blockStatus, FIntPoint destination);
 
 	static FIntPoint ToFIntPoint(FVector2D position);
 	static int ToInt(float value);
 	Block GetRandomBlock();
 
-	TArray<BlockPhysicalStatus> blocks;
+	TArray<PhysicalBlock> physicalBlocks;
 	int numRows = 0;
 	int numCols = 0;
 	float elapsedTime = 0.0f;
