@@ -66,8 +66,9 @@ bool BlockPhysics::CheckAndProcessMatch()
 	auto thereIsAMatch = !blockMatrix.HasNoMatch();
 	if (thereIsAMatch) {
 		UE_LOG(LogTemp, Display, TEXT("match occured"));
-		blockMatrix.ProcessMatch();
-		StartDestroyingMatchedBlocksAccordingTo(blockMatrix);
+		auto matchResult = blockMatrix.ProcessMatch(TSet<FIntPoint>());
+		StartDestroyingMatchedBlocksAccordingTo(matchResult);
+		SetSpecialBlocksSpawnAccordingTo(matchResult);
 	}
 	return thereIsAMatch;
 }
@@ -83,6 +84,7 @@ void BlockPhysics::ChangeCompletedActionsToNextActions(bool thereIsAMatch)
 {
 	for (auto& block : blocks) {
 		if (block.currentAction->IsJustCompleted()) {
+			block.block = block.currentAction->GetNextBlock(block.block);
 			block.currentAction = block.currentAction->GetNextAction(thereIsAMatch);
 		}
 	}
@@ -270,23 +272,33 @@ BlockMatrix BlockPhysics::GetBlockMatrix() const
 	return BlockMatrix(numRows, numCols, blockMatrix);
 }
 
-void BlockPhysics::StartDestroyingMatchedBlocksAccordingTo(const BlockMatrix& matchProcessedBlockMatrix)
+void BlockPhysics::StartDestroyingMatchedBlocksAccordingTo(const MatchResult& matchResult)
 {
-	const auto matchProcessedBlocks = matchProcessedBlockMatrix.GetBlock2DArray();
-	for (int i = 0; i < numRows; i++) {
-		for (int j = 0; j < numCols; j++) {
-			const auto isBlockDestroyed = (matchProcessedBlocks[i][j] == Block::INVALID);
-			if (!isBlockDestroyed)
-				continue;
-
-			auto blockStatus = GetBlockAt(FIntPoint{ i, j });
-			if (blockStatus == nullptr) {
-				UE_LOG(LogTemp, Warning, TEXT("block to update does not exist at (%d, %d)"), i, j);
-				continue;
-			}
-			UE_LOG(LogTemp, Display, TEXT("block to destroy at (%d, %d)"), i, j);
-			blockStatus->currentAction = MakeUnique<GetsDestroyedBlockAction>(blockStatus->currentAction->GetPosition());
+	for (const auto matchedPos : matchResult.GetMatchedPositions()) {
+		const auto row = matchedPos.X;
+		const auto col = matchedPos.Y;
+		auto blockStatus = GetBlockAt(matchedPos);
+		if (blockStatus == nullptr) {
+			UE_LOG(LogTemp, Warning, TEXT("block to update does not exist at (%d, %d)"), row, col);
+			continue;
 		}
+		UE_LOG(LogTemp, Display, TEXT("block to destroy at (%d, %d)"), row, col);
+		blockStatus->currentAction = MakeUnique<GetsDestroyedBlockAction>(blockStatus->currentAction->GetPosition());
+	}
+}
+
+void BlockPhysics::SetSpecialBlocksSpawnAccordingTo(const MatchResult& matchResult)
+{
+	for (const auto& munchickenSpawnPosition : matchResult.GetSpawnPositionsOf(Block::MUNCHICKEN)) {
+		const auto row = munchickenSpawnPosition.X;
+		const auto col = munchickenSpawnPosition.Y;
+		auto blockStatus = GetBlockAt(munchickenSpawnPosition);
+		if (blockStatus == nullptr) {
+			UE_LOG(LogTemp, Warning, TEXT("block to update does not exist at (%d, %d)"), row, col);
+			continue;
+		}
+		UE_LOG(LogTemp, Display, TEXT("Special block generation reserved at (%d, %d)"), row, col);
+		blockStatus->currentAction = MakeUnique<GetsDestroyedAndSpawnBlockAfterAction>(FVector2D(munchickenSpawnPosition), Block::MUNCHICKEN);
 	}
 }
 
@@ -429,4 +441,15 @@ FString PrettyPrint(ActionType actionType)
 	default:
 		return TEXT("");
 	}
+}
+
+GetsDestroyedAndSpawnBlockAfterAction::GetsDestroyedAndSpawnBlockAfterAction(FVector2D initialPos, Block blockToSpawnAfterDestroy)
+	: GetsDestroyedBlockAction(initialPos), blockToSpawnAfterDestroy(blockToSpawnAfterDestroy)
+{
+
+}
+
+TUniquePtr<BlockAction> GetsDestroyedAndSpawnBlockAfterAction::GetNextAction(bool thereIsAMatch) const
+{
+	return MakeUnique<IdleBlockAction>(position);
 }

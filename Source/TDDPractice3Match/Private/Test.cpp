@@ -168,6 +168,14 @@ const BlockMatrix TestUtils::blockMatrix5x5 = BlockMatrix(
 	}
 );
 
+const BlockMatrix TestUtils::twoByTwoMatchTest = BlockMatrix{
+	TArray<TArray<Block>>{
+		{ Block::ONE, Block::TWO, Block::TWO, Block::ONE, Block::ONE},
+		{ Block::ONE, Block::TWO, Block::THREE, Block::TWO, Block::ONE},
+		{ Block::THREE, Block::ONE, Block::THREE, Block::FOUR, Block::THREE}
+	}
+};
+
 bool TestUtils::IsCorrectlyGettingDestroyed(const BlockPhysics& blockPhysics, const TArray<FIntPoint>& onlyPositionsThatShouldBeDestroyed)
 {
 	const auto numRows = blockPhysics.GetNumRows();
@@ -286,6 +294,16 @@ bool TestUtils::AllBlocksAreFilled(const BlockMatrix& blockMatrix)
 	return true;
 }
 
+bool TestUtils::IsExpectedBlockSpawnedAt(const BlockMatrix& blockMatrix, FIntPoint expectedSpawnPos, Block expectedBlockType)
+{
+	const auto actualBlockType = blockMatrix.At(expectedSpawnPos.X, expectedSpawnPos.Y);
+	if (actualBlockType != expectedBlockType) {
+		UE_LOG(LogTemp, Error, TEXT("expected: %s but was %s at (%d, %d)"), *PrettyPrint(expectedBlockType), *PrettyPrint(actualBlockType), expectedSpawnPos.X, expectedSpawnPos.Y);
+		return false;
+	}
+	return true;
+}
+
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(MultipleNewBlocksShouldBeGenerated, "Board.OnSwipe.Multiple new blocks should be generated if needed", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
 bool MultipleNewBlocksShouldBeGenerated::RunTest(const FString& Parameters) {
 	// Setup
@@ -320,5 +338,36 @@ bool MultipleNewBlocksShouldBeGenerated::RunTest(const FString& Parameters) {
 	blockPhysics.Tick(TestUtils::GetFallTime(blockPhysics, 3) + TestUtils::veryShortTime);
 	if (!TestUtils::AllBlocksAreFilled(blockPhysics.GetBlockMatrix()))
 		return false;
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(MunchickenShouldBeGenerated, "Board.OnSwipe.Munchicken should be generated if 2x2 matched", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool MunchickenShouldBeGenerated::RunTest(const FString& Parameters) {
+	// Setup
+	const auto swipeStart = FIntPoint{ 1, 3 };
+	const auto swipeEnd = FIntPoint{ 1, 2 };
+	auto blockMatrix = TestUtils::twoByTwoMatchTest;
+	auto blockPhysics = BlockPhysics(blockMatrix);
+	// Swipe
+	blockPhysics.RecieveSwipeInput(swipeStart, swipeEnd);
+	// After swipe move end
+	blockPhysics.Tick((blockPhysics.GRID_SIZE / blockPhysics.SWIPE_MOVE_SPEED) + TestUtils::veryShortTime);
+	const auto destroyExpectedPositions = TArray<FIntPoint>{
+		FIntPoint{0,1}, FIntPoint{0,2}, FIntPoint{1,1}, FIntPoint{1,2}
+	};
+	if (!TestUtils::IsCorrectlyGettingDestroyed(blockPhysics, destroyExpectedPositions))
+		return false;
+	// After destroy animation end
+	blockPhysics.Tick(blockPhysics.DESTROY_ANIMATION_TIME + TestUtils::veryShortTime);
+	const auto expectedMunchickenSpawnPosition = FIntPoint{ 1, 2 };
+	if (!TestUtils::IsExpectedBlockSpawnedAt(blockPhysics.GetBlockMatrix(), expectedMunchickenSpawnPosition, Block::MUNCHICKEN))
+		return false;
+	if (!TestUtils::AreNewBlocksSpawned(blockPhysics, 1, 2) || !TestUtils::AreNewBlocksSpawned(blockPhysics, 2, 1))
+		return false;
+	// After falling end
+	blockPhysics.Tick(TestUtils::GetFallTime(blockPhysics, 1) + TestUtils::veryShortTime);
+	if (!TestUtils::IsExpectedBlockSpawnedAt(blockPhysics.GetBlockMatrix(), FIntPoint{ 1,2 }, Block::MUNCHICKEN))
+		return false;
+
 	return true;
 }

@@ -19,6 +19,7 @@ void FTDDPractice3MatchModuleImpl::ShutdownModule() {
 	FAutomationTestFramework::Get().UnregisterAutomationTest(TEXT("IfNoMatchOnSwipeThenBlocksShouldReturn"));
 	FAutomationTestFramework::Get().UnregisterAutomationTest(TEXT("TickFrequencyShouldNotMatter"));
 	FAutomationTestFramework::Get().UnregisterAutomationTest(TEXT("MultipleNewBlocksShouldBeGenerated"));
+	FAutomationTestFramework::Get().UnregisterAutomationTest(TEXT("MunchickenShouldBeGenerated"));
 
 	UE_LOG(LogTemp, Warning, TEXT("ShoutdownModule"));
 }

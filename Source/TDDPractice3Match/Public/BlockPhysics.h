@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Block.h"
+#include "BlockMatrix.h"
 
 enum class ActionType {
 	Idle,
@@ -26,6 +27,7 @@ public:
 	virtual bool ShouldBeRemoved() const { return false; }
 	// returns nullptr if there's no next action
 	virtual TUniquePtr<BlockAction> GetNextAction(bool thereIsAMatch) const = 0;
+	virtual Block GetNextBlock(Block originalBlock) const { return originalBlock; }
 	FVector2D GetPosition() const { return position; }
 	virtual FVector2D GetOccupiedPosition() const { return GetPosition(); }
 
@@ -109,6 +111,16 @@ private:
 	bool completed = false;
 };
 
+class GetsDestroyedAndSpawnBlockAfterAction : public GetsDestroyedBlockAction {
+public:
+	GetsDestroyedAndSpawnBlockAfterAction(FVector2D initialPos, Block blockToSpawnAfterDestroy);
+	virtual TUniquePtr<BlockAction> GetNextAction(bool thereIsAMatch) const override;
+	virtual bool ShouldBeRemoved() const override { return false; }
+	virtual Block GetNextBlock(Block originalBlock) const override { return blockToSpawnAfterDestroy; }
+private:
+	Block blockToSpawnAfterDestroy;
+};
+
 
 class BlockPhysicalStatus {
 public:
@@ -170,7 +182,8 @@ private:
 	const BlockPhysicalStatus* GetBlockAt(FIntPoint position) const;
 	BlockPhysicalStatus* GetBlockAt(FIntPoint position);
 
-	void StartDestroyingMatchedBlocksAccordingTo(const BlockMatrix& blockMatrix);
+	void StartDestroyingMatchedBlocksAccordingTo(const MatchResult& blockMatrix);
+	void SetSpecialBlocksSpawnAccordingTo(const MatchResult& blockMatrix);
 
 	int NumOccupiedCellsInColumn(int colIndex) const;
 	void MakeBlockFallToDestination(BlockPhysicalStatus& blockStatus, FIntPoint destination);
