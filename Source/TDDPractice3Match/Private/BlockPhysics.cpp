@@ -96,18 +96,18 @@ void BlockPhysics::SetFallingActionsAndGenerateNewBlocks()
 	public:
 		BlocksInColumn(BlockPhysics& blockPhysics, int col) : blockPhysics(blockPhysics), col(col) {
 			for (int row = 0; row < blockPhysics.GetNumRows(); row++) {
-				auto pBlockStatus = blockPhysics.GetBlockAt(FIntPoint{ row, col });
-				if (pBlockStatus != nullptr)
+				const auto* physicalBlock = blockPhysics.GetBlockAt(FIntPoint{ row, col });
+				if (physicalBlock != nullptr)
 					rowIndicesOfBlocks.Add(row);
 			}
 		}
 		bool IsEmpty() const { return rowIndicesOfBlocks.Num() == 0; }
 		PhysicalBlock& PopLowest() {
 			const auto lowestRow = rowIndicesOfBlocks.Pop();
-			auto pBlockStatus = blockPhysics.GetBlockAt(FIntPoint{ lowestRow, col });
-			if (pBlockStatus == nullptr)
+			auto* physicalBlock = blockPhysics.GetBlockAt(FIntPoint{ lowestRow, col });
+			if (physicalBlock == nullptr)
 				UE_LOG(LogTemp, Error, TEXT("Queryed GetBlockAt with non-empty location and got nullptr: (%d, %d)"), lowestRow, col);
-			return *pBlockStatus;
+			return *physicalBlock;
 		}
 	private:
 		BlockPhysics& blockPhysics;
@@ -277,13 +277,13 @@ void BlockPhysics::StartDestroyingMatchedBlocksAccordingTo(const MatchResult& ma
 	for (const auto matchedPos : matchResult.GetMatchedPositions()) {
 		const auto row = matchedPos.X;
 		const auto col = matchedPos.Y;
-		auto blockStatus = GetBlockAt(matchedPos);
-		if (blockStatus == nullptr) {
+		auto* physicalBlock = GetBlockAt(matchedPos);
+		if (physicalBlock == nullptr) {
 			UE_LOG(LogTemp, Warning, TEXT("block to update does not exist at (%d, %d)"), row, col);
 			continue;
 		}
 		UE_LOG(LogTemp, Display, TEXT("block to destroy at (%d, %d)"), row, col);
-		blockStatus->currentAction = MakeUnique<GetsDestroyedBlockAction>(blockStatus->currentAction->GetPosition());
+		physicalBlock->currentAction = MakeUnique<GetsDestroyedBlockAction>(physicalBlock->currentAction->GetPosition());
 	}
 }
 
@@ -292,13 +292,13 @@ void BlockPhysics::SetSpecialBlocksSpawnAccordingTo(const MatchResult& matchResu
 	for (const auto& munchickenSpawnPosition : matchResult.GetSpawnPositionsOf(Block::MUNCHICKEN)) {
 		const auto row = munchickenSpawnPosition.X;
 		const auto col = munchickenSpawnPosition.Y;
-		auto blockStatus = GetBlockAt(munchickenSpawnPosition);
-		if (blockStatus == nullptr) {
+		auto* physicalBlock = GetBlockAt(munchickenSpawnPosition);
+		if (physicalBlock == nullptr) {
 			UE_LOG(LogTemp, Warning, TEXT("block to update does not exist at (%d, %d)"), row, col);
 			continue;
 		}
 		UE_LOG(LogTemp, Display, TEXT("Special block generation reserved at (%d, %d)"), row, col);
-		blockStatus->currentAction = MakeUnique<GetsDestroyedAndSpawnBlockAfterAction>(FVector2D(munchickenSpawnPosition), Block::MUNCHICKEN);
+		physicalBlock->currentAction = MakeUnique<GetsDestroyedAndSpawnBlockAfterAction>(FVector2D(munchickenSpawnPosition), Block::MUNCHICKEN);
 	}
 }
 
