@@ -176,6 +176,15 @@ const BlockMatrix TestUtils::twoByTwoMatchTest = BlockMatrix{
 	}
 };
 
+const BlockMatrix TestUtils::munchickenRollTest = BlockMatrix{
+	TArray<TArray<Block>>{
+		{Block::ONE, Block::ONE, Block::TWO, Block::TWO},
+		{Block::THREE, Block::THREE, Block::FOUR, Block::FOUR},
+		{Block::ONE, Block::ONE, Block::MUNCHICKEN, Block::TWO},
+		{Block::THREE, Block::THREE, Block::FOUR, Block::FOUR}
+	}
+};
+
 bool TestUtils::IsCorrectlyGettingDestroyed(const BlockPhysics& blockPhysics, const TArray<FIntPoint>& onlyPositionsThatShouldBeDestroyed)
 {
 	const auto numRows = blockPhysics.GetNumRows();
@@ -268,8 +277,8 @@ bool TestUtils::AreIdenticalExcept(const BlockMatrix& currentMatrix, const Block
 				const auto currentBlock = currentMatrix.At(i, j);
 				const auto originalBlock = originalMatrix.At(i, j);
 				if (currentBlock != originalBlock) {
-					UE_LOG(LogTemp, Error, TEXT("Block (type: %d) at (%d, %d) differs from original block (type: %d)"),
-						currentBlock, i, j, originalBlock);
+					UE_LOG(LogTemp, Error, TEXT("Block (type: %d) at (%d, %d) differs from original block (type: %s)"),
+						currentBlock, i, j, *PrettyPrint(originalBlock));
 					return false;
 				}
 			}
@@ -368,6 +377,36 @@ bool MunchickenShouldBeGenerated::RunTest(const FString& Parameters) {
 	blockPhysics.Tick(TestUtils::GetFallTime(blockPhysics, 1) + TestUtils::veryShortTime);
 	if (!TestUtils::IsExpectedBlockSpawnedAt(blockPhysics.GetBlockMatrix(), FIntPoint{ 1,2 }, Block::MUNCHICKEN))
 		return false;
+
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(SwipeOnMunchickenShouldRollIt, "Board.OnSwipe.Swipe on Munchicken should roll it", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool SwipeOnMunchickenShouldRollIt::RunTest(const FString& Parameters) {
+	// Setup
+	const auto swipeStart = FIntPoint{ 2, 2 };
+	const auto swipeEnd = FIntPoint{ 2, 1 };
+	const auto swipeDirectionVec = FIntPoint{ 0, -1 };
+	auto blockMatrix = TestUtils::munchickenRollTest;
+	auto counter = 0;
+	const auto newBlockGenerator = [&counter]() -> int {
+		return counter++;
+	};
+	auto blockPhysics = BlockPhysics(blockMatrix, newBlockGenerator);
+	// Swipe
+	blockPhysics.RecieveSwipeInput(swipeStart, swipeEnd);
+	auto munchickenRollTrace = TArray<FIntPoint>{};
+	munchickenRollTrace.Add(swipeStart);
+	const auto numGridsToGo = 3;
+	// for each cells this munchicken enter
+	for (int i = 0; i < numGridsToGo; i++) {
+		blockPhysics.Tick((blockPhysics.GRID_SIZE / blockPhysics.ROLL_SPEED) + TestUtils::veryShortTime);
+		const auto munchickenPreviousPosition = swipeStart + swipeDirectionVec*i;
+		if (!TestUtils::AreNewBlocksSpawned(blockPhysics, munchickenPreviousPosition.Y, 1))
+			return false;
+		const auto munchickenCurrentPosition = swipeStart + swipeDirectionVec*(i+1);
+		munchickenRollTrace.Add(munchickenCurrentPosition);
+	}
 
 	return true;
 }

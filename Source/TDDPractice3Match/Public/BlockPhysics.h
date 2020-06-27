@@ -11,7 +11,8 @@ enum class ActionType {
 	SwipeMove,
 	SwipeReturn,
 	Fall,
-	GetsDestroyed
+	GetsDestroyed,
+	Roll
 };
 
 FString PrettyPrint(ActionType actionType);
@@ -30,6 +31,8 @@ public:
 	virtual Block GetNextBlock(Block originalBlock) const { return originalBlock; }
 	FVector2D GetPosition() const { return position; }
 	virtual FVector2D GetOccupiedPosition() const { return GetPosition(); }
+	// lower int means lower layer
+	virtual int GetLayer() const { return 0; }
 
 	virtual ActionType GetType() const = 0;
 protected:
@@ -121,6 +124,45 @@ private:
 	Block blockToSpawnAfterDestroy;
 };
 
+class BlockPhysics;
+class MunchickenRollAction : public BlockAction {
+public:
+	MunchickenRollAction(FVector2D initialPos, FIntPoint rollDirection, BlockPhysics& blockPhysics);
+
+	void Tick(float deltaSeconds) override;
+	bool IsJustCompleted() const override;
+	bool ShouldCheckMatch() const override;
+	bool IsEligibleForMatching() const override;
+	TUniquePtr<BlockAction> GetNextAction(bool thereIsAMatch) const override;
+	ActionType GetType() const override;
+
+private:
+	void UpdatePosition(float deltaSeconds);
+	TSet<FIntPoint> GetCellPositionsRolledOver() const;
+	static TSet<int> GetIntegersBetween(float bound1, float bound2);
+	void DestroyBlocksInBackground(const TSet<FIntPoint>& destroyPositions);
+	bool IsOutOfTheMap() const;
+	FVector2D previousPosition;
+	FIntPoint rollDirection;
+	BlockPhysics& blockPhysics;
+	enum RollType {
+		Invalid,
+		Vertical,
+		Horizontal
+	};
+	RollType rollType;
+};
+
+class GetsDestroyedInBackgroundBlockAction : public GetsDestroyedBlockAction {
+
+public:
+	GetsDestroyedInBackgroundBlockAction(FVector2D initialPos) : GetsDestroyedBlockAction(initialPos) {}
+	int GetLayer() const override { return -1; }
+	FVector2D GetOccupiedPosition() const override { return INVALID_POSITION; }
+private:
+	const static FIntPoint INVALID_POSITION;
+};
+
 
 class PhysicalBlock {
 public:
@@ -166,6 +208,7 @@ public:
 	constexpr static float GRID_SIZE = 1.0f;
 	constexpr static float GRAVITY_ACCELERATION = 10.0f;
 	constexpr static float SWIPE_MOVE_SPEED = 1.0f;
+	constexpr static float ROLL_SPEED = SWIPE_MOVE_SPEED;
 	constexpr static float DESTROY_ANIMATION_TIME = 0.2f;
 
 	bool IsEmpty(FIntPoint position) const;
@@ -174,13 +217,18 @@ public:
 	bool IsPlayingDestroyAnimAt(FIntPoint position) const;
 	bool IsIdleAt(FIntPoint position) const;
 
+	void DestroyBlocksInBackgroundAt(const TSet<FIntPoint>& destroyPositions, const TSet<Block>& exceptionalBlocks);
+
 	BlockMatrix GetBlockMatrix() const;
 	int GetNumRows() const { return numRows; }
 	int GetNumCols() const { return numCols; }
 
+	static FIntPoint ToFIntPoint(FVector2D position);
+
 private:
-	const PhysicalBlock* GetBlockAt(FIntPoint position) const;
-	PhysicalBlock* GetBlockAt(FIntPoint position);
+	const PhysicalBlock* GetTopmostBlockAt(FIntPoint position) const;
+	PhysicalBlock* GetTopmostBlockAt(FIntPoint position);
+	TArray<PhysicalBlock*> GetBlocksAt(FIntPoint position);
 
 	void StartDestroyingMatchedBlocksAccordingTo(const MatchResult& blockMatrix);
 	void SetSpecialBlocksSpawnAccordingTo(const MatchResult& blockMatrix);
@@ -188,7 +236,6 @@ private:
 	int NumOccupiedCellsInColumn(int colIndex) const;
 	void MakeBlockFallToDestination(PhysicalBlock& blockStatus, FIntPoint destination);
 
-	static FIntPoint ToFIntPoint(FVector2D position);
 	static int ToInt(float value);
 	Block GetRandomBlock();
 

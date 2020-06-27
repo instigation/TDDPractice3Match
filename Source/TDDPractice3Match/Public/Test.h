@@ -13,6 +13,7 @@ public:
 	static const float veryShortTime;
 	static const BlockMatrix blockMatrix5x5;
 	static const BlockMatrix twoByTwoMatchTest;
+	static const BlockMatrix munchickenRollTest;
 
 	static bool IsCorrectlyGettingDestroyed(const BlockPhysics& blockPhysics, const TArray<FIntPoint>& onlyPositionsThatShouldBeDestroyed);
 	static bool IsCorrectlyEmpty(const BlockPhysics& blockPhysics, const TArray<FIntPoint>& onlyPositionsThatShouldBeEmpty);

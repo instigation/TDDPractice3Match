@@ -2,6 +2,7 @@
 
 #include "../Public/BlockPhysics.h"
 #include "GenericPlatform/GenericPlatformMath.h"
+#include "../Public/MyMathUtils.h"
 
 BlockPhysics::BlockPhysics(const BlockMatrix& blockMatrix, TFunction<int(void)> newBlockGenerator)
 	:newBlockGenerator(newBlockGenerator)
@@ -96,7 +97,7 @@ void BlockPhysics::SetFallingActionsAndGenerateNewBlocks()
 	public:
 		BlocksInColumn(BlockPhysics& blockPhysics, int col) : blockPhysics(blockPhysics), col(col) {
 			for (int row = 0; row < blockPhysics.GetNumRows(); row++) {
-				const auto* physicalBlock = blockPhysics.GetBlockAt(FIntPoint{ row, col });
+				const auto* physicalBlock = blockPhysics.GetTopmostBlockAt(FIntPoint{ row, col });
 				if (physicalBlock != nullptr)
 					rowIndicesOfBlocks.Add(row);
 			}
@@ -104,9 +105,9 @@ void BlockPhysics::SetFallingActionsAndGenerateNewBlocks()
 		bool IsEmpty() const { return rowIndicesOfBlocks.Num() == 0; }
 		PhysicalBlock& PopLowest() {
 			const auto lowestRow = rowIndicesOfBlocks.Pop();
-			auto* physicalBlock = blockPhysics.GetBlockAt(FIntPoint{ lowestRow, col });
+			auto* physicalBlock = blockPhysics.GetTopmostBlockAt(FIntPoint{ lowestRow, col });
 			if (physicalBlock == nullptr)
-				UE_LOG(LogTemp, Error, TEXT("Queryed GetBlockAt with non-empty location and got nullptr: (%d, %d)"), lowestRow, col);
+				UE_LOG(LogTemp, Error, TEXT("Queryed GetTopmostBlockAt with non-empty location and got nullptr: (%d, %d)"), lowestRow, col);
 			return *physicalBlock;
 		}
 	private:
@@ -140,8 +141,8 @@ void BlockPhysics::SetFallingActionsAndGenerateNewBlocks()
 		while (!positionsInCol.IsEmpty()) {
 			auto destination = positionsInCol.PopLowest();
 			if (blocksInCol.IsEmpty()) {
+				UE_LOG(LogTemp, Display, TEXT("New physicalBlock generated at: (%d, %d)"), topRow, col);
 				auto newBlock = PhysicalBlock(GetRandomBlock(), FIntPoint{ topRow--, col });
-				UE_LOG(LogTemp, Display, TEXT("New block generated at: (%d, %d)"), topRow, col);
 				MakeBlockFallToDestination(newBlock, destination);
 				physicalBlocks.Add(MoveTemp(newBlock));
 			}
@@ -160,7 +161,8 @@ int BlockPhysics::NumOccupiedCellsInColumn(int colIndex) const
 	auto count = 0;
 	auto occupiedRowIndices = TSet<int>();
 	for (const auto& block : physicalBlocks) {
-		if (FGenericPlatformMath::Abs(block.currentAction->GetOccupiedPosition().Y - colIndex) < DELTA_DISTANCE) {
+		const auto isOccupyingPositionInThisColumn = FGenericPlatformMath::Abs(block.currentAction->GetOccupiedPosition().Y - colIndex) < DELTA_DISTANCE;
+		if (isOccupyingPositionInThisColumn) {
 			occupiedRowIndices.Add(ToInt(block.currentAction->GetOccupiedPosition().X));
 			count++;
 		}
@@ -168,25 +170,31 @@ int BlockPhysics::NumOccupiedCellsInColumn(int colIndex) const
 	if (count != occupiedRowIndices.Num()) {
 		UE_LOG(LogTemp, Warning, TEXT("'count' and 'occupied row indices count' differ"));
 	}
-	return count;
+	return occupiedRowIndices.Num();
 }
 
 void BlockPhysics::RecieveSwipeInput(FIntPoint swipeStart, FIntPoint swipeEnd)
 {
-	auto startBlockStatus = GetBlockAt(swipeStart);
-	auto endBlockStatus = GetBlockAt(swipeEnd);
-	if ((startBlockStatus == nullptr) || (endBlockStatus == nullptr)) {
-		UE_LOG(LogTemp, Warning, TEXT("RecieveSwipeInput precondition: blocks should exist at start and end points: (%d, %d)->(%d, %d)"),
-			swipeStart.X, swipeStart.Y, swipeEnd.X, swipeEnd.Y);
-		return;
+	auto startBlock = GetTopmostBlockAt(swipeStart);
+	if (startBlock->block != Block::MUNCHICKEN) {
+		auto endBlock = GetTopmostBlockAt(swipeEnd);
+		if ((startBlock == nullptr) || (endBlock == nullptr)) {
+			UE_LOG(LogTemp, Warning, TEXT("RecieveSwipeInput precondition: blocksAtDestroyPosition should exist at start and end points: (%d, %d)->(%d, %d)"),
+				swipeStart.X, swipeStart.Y, swipeEnd.X, swipeEnd.Y);
+			return;
+		}
+		startBlock->currentAction = MakeUnique<SwipeMoveBlockAction>(swipeStart, swipeEnd);
+		endBlock->currentAction = MakeUnique<SwipeMoveBlockAction>(swipeEnd, swipeStart);
 	}
-	startBlockStatus->currentAction = MakeUnique<SwipeMoveBlockAction>(swipeStart, swipeEnd);
-	endBlockStatus->currentAction = MakeUnique<SwipeMoveBlockAction>(swipeEnd, swipeStart);
+	else {
+		FIntPoint rollDirection = swipeEnd - swipeStart;
+		startBlock->currentAction = MakeUnique<MunchickenRollAction>(swipeStart, rollDirection, *this);
+	}
 }
 
 bool BlockPhysics::IsEmpty(FIntPoint position) const
 {
-	return GetBlockAt(position) == nullptr;
+	return GetTopmostBlockAt(position) == nullptr;
 }
 
 bool BlockPhysics::ExistsBlockBetween(FIntPoint startPos, FIntPoint endPos) const
@@ -201,7 +209,7 @@ bool BlockPhysics::ExistsBlockBetween(FIntPoint startPos, FIntPoint endPos) cons
 		blockPosToStart.Normalize();
 		auto blockPosToEnd = FVector2D(endPos) - blockPos;
 		if (blockPosToEnd.IsNearlyZero(DELTA_DISTANCE)) {
-			UE_LOG(LogTemp, Display, TEXT("blockPosToEnd Nearly zero. block (%f,%f), end (%d,%d)"),
+			UE_LOG(LogTemp, Display, TEXT("blockPosToEnd Nearly zero. physicalBlock (%f,%f), end (%d,%d)"),
 				blockPos.X, blockPos.Y, endPos.X, endPos.Y);
 			return true;
 		}
@@ -229,7 +237,7 @@ bool BlockPhysics::ExistsBlockNear(FIntPoint searchPosition, float threshold) co
 
 bool BlockPhysics::IsPlayingDestroyAnimAt(FIntPoint position) const
 {
-	auto blockStatus = GetBlockAt(position);
+	auto blockStatus = GetTopmostBlockAt(position);
 	if (blockStatus == nullptr)
 		return false;
 	return blockStatus->currentAction->GetType() == ActionType::GetsDestroyed;
@@ -237,28 +245,62 @@ bool BlockPhysics::IsPlayingDestroyAnimAt(FIntPoint position) const
 
 bool BlockPhysics::IsIdleAt(FIntPoint position) const
 {
-	auto pBlock = GetBlockAt(position);
+	auto pBlock = GetTopmostBlockAt(position);
 	return (pBlock != nullptr) && (pBlock->currentAction->GetType() == ActionType::Idle);
 }
 
-PhysicalBlock* BlockPhysics::GetBlockAt(FIntPoint position)
+void BlockPhysics::DestroyBlocksInBackgroundAt(const TSet<FIntPoint>& destroyPositions, const TSet<Block>& exceptionalBlocks)
 {
-	for (auto& block : physicalBlocks) {
-		if ((block.currentAction->GetPosition() - position).SizeSquared() <= DELTA_DISTANCE) {
-			return &block;
+	for (const auto& destroyPosition : destroyPositions) {
+		auto blocksAtDestroyPosition = GetBlocksAt(destroyPosition);
+		for (auto physicalBlock : blocksAtDestroyPosition) {
+			if (!exceptionalBlocks.Contains(physicalBlock->block)) {
+				physicalBlock->currentAction = MakeUnique<GetsDestroyedInBackgroundBlockAction>(destroyPosition);
+			}
 		}
 	}
-	return nullptr;
 }
 
-const PhysicalBlock* BlockPhysics::GetBlockAt(FIntPoint position) const
+PhysicalBlock* BlockPhysics::GetTopmostBlockAt(FIntPoint position)
 {
-	for (const auto& block : physicalBlocks) {
+	auto highestLayerSoFar = INT_MIN;
+	PhysicalBlock* ret = nullptr;
+	for (auto& block : physicalBlocks) {
 		if ((block.currentAction->GetPosition() - position).SizeSquared() <= DELTA_DISTANCE) {
-			return &block;
+			if (highestLayerSoFar < block.currentAction->GetLayer()) {
+				ret = &block;
+				highestLayerSoFar = block.currentAction->GetLayer();
+			}
 		}
 	}
-	return nullptr;
+	return ret;
+}
+
+const PhysicalBlock* BlockPhysics::GetTopmostBlockAt(FIntPoint position) const
+{
+	auto highestLayerSoFar = INT_MIN;
+	const PhysicalBlock* ret = nullptr;
+	for (const auto& block : physicalBlocks) {
+		if ((block.currentAction->GetPosition() - position).SizeSquared() <= DELTA_DISTANCE) {
+			if (highestLayerSoFar < block.currentAction->GetLayer()) {
+				ret = &block;
+				highestLayerSoFar = block.currentAction->GetLayer();
+			}
+		}
+	}
+	return ret;
+}
+
+TArray<PhysicalBlock*> BlockPhysics::GetBlocksAt(FIntPoint position)
+{
+	auto ret = TArray<PhysicalBlock*>();
+	for (auto& block : physicalBlocks) {
+		if ((block.currentAction->GetPosition() - position).SizeSquared() <= DELTA_DISTANCE) {
+			ret.Add(&block);
+		}
+	}
+	return ret;
+
 }
 
 BlockMatrix BlockPhysics::GetBlockMatrix() const
@@ -277,12 +319,12 @@ void BlockPhysics::StartDestroyingMatchedBlocksAccordingTo(const MatchResult& ma
 	for (const auto matchedPos : matchResult.GetMatchedPositions()) {
 		const auto row = matchedPos.X;
 		const auto col = matchedPos.Y;
-		auto* physicalBlock = GetBlockAt(matchedPos);
+		auto* physicalBlock = GetTopmostBlockAt(matchedPos);
 		if (physicalBlock == nullptr) {
-			UE_LOG(LogTemp, Warning, TEXT("block to update does not exist at (%d, %d)"), row, col);
+			UE_LOG(LogTemp, Warning, TEXT("physicalBlock to update does not exist at (%d, %d)"), row, col);
 			continue;
 		}
-		UE_LOG(LogTemp, Display, TEXT("block to destroy at (%d, %d)"), row, col);
+		UE_LOG(LogTemp, Display, TEXT("physicalBlock to destroy at (%d, %d)"), row, col);
 		physicalBlock->currentAction = MakeUnique<GetsDestroyedBlockAction>(physicalBlock->currentAction->GetPosition());
 	}
 }
@@ -292,12 +334,12 @@ void BlockPhysics::SetSpecialBlocksSpawnAccordingTo(const MatchResult& matchResu
 	for (const auto& munchickenSpawnPosition : matchResult.GetSpawnPositionsOf(Block::MUNCHICKEN)) {
 		const auto row = munchickenSpawnPosition.X;
 		const auto col = munchickenSpawnPosition.Y;
-		auto* physicalBlock = GetBlockAt(munchickenSpawnPosition);
+		auto* physicalBlock = GetTopmostBlockAt(munchickenSpawnPosition);
 		if (physicalBlock == nullptr) {
-			UE_LOG(LogTemp, Warning, TEXT("block to update does not exist at (%d, %d)"), row, col);
+			UE_LOG(LogTemp, Warning, TEXT("physicalBlock to update does not exist at (%d, %d)"), row, col);
 			continue;
 		}
-		UE_LOG(LogTemp, Display, TEXT("Special block generation reserved at (%d, %d)"), row, col);
+		UE_LOG(LogTemp, Display, TEXT("Special physicalBlock generation reserved at (%d, %d)"), row, col);
 		physicalBlock->currentAction = MakeUnique<GetsDestroyedAndSpawnBlockAfterAction>(FVector2D(munchickenSpawnPosition), Block::MUNCHICKEN);
 	}
 }
@@ -453,3 +495,121 @@ TUniquePtr<BlockAction> GetsDestroyedAndSpawnBlockAfterAction::GetNextAction(boo
 {
 	return MakeUnique<IdleBlockAction>(position);
 }
+
+MunchickenRollAction::MunchickenRollAction(FVector2D initialPos, FIntPoint rollDirection, BlockPhysics& blockPhysics)
+	: BlockAction(initialPos), rollDirection(rollDirection), blockPhysics(blockPhysics)
+{
+	if (rollDirection.X == 0)
+		rollType = Horizontal;
+	else if (rollDirection.Y == 0)
+		rollType = Vertical;
+	else {
+		UE_LOG(LogTemp, Warning, TEXT("Initialized MunchickenRollAction with wrong rollDirection: (%d, %d)"), rollDirection.X, rollDirection.Y);
+		rollType = Invalid;
+	}
+}
+
+void MunchickenRollAction::Tick(float deltaSeconds)
+{
+	previousPosition = position;
+	UpdatePosition(deltaSeconds);
+	const auto cellPositionsRolledOver = GetCellPositionsRolledOver();
+	DestroyBlocksInBackground(cellPositionsRolledOver);
+}
+
+bool MunchickenRollAction::IsJustCompleted() const
+{
+	return IsOutOfTheMap();
+}
+
+bool MunchickenRollAction::ShouldCheckMatch() const
+{
+	return false;
+}
+
+bool MunchickenRollAction::IsEligibleForMatching() const
+{
+	return false;
+}
+
+TUniquePtr<BlockAction> MunchickenRollAction::GetNextAction(bool thereIsAMatch) const
+{
+	return MakeUnique<GetsDestroyedBlockAction>(position);
+}
+
+ActionType MunchickenRollAction::GetType() const
+{
+	return ActionType::Roll;
+}
+
+void MunchickenRollAction::UpdatePosition(float deltaSeconds)
+{
+	const auto rollDistance = BlockPhysics::ROLL_SPEED * deltaSeconds;
+	position += rollDirection * rollDistance;
+}
+
+TSet<FIntPoint> MunchickenRollAction::GetCellPositionsRolledOver() const
+{
+	TSet<FIntPoint> ret;
+	switch (rollType) {
+	case Horizontal: {
+		const auto movingRow = BlockPhysics::ToFIntPoint(position).X;
+		const auto rolledOverCols = GetIntegersBetween(previousPosition.Y, position.Y);
+		for (const auto& rolledOverCol : rolledOverCols) {
+			const auto rolledOverCellPos = FIntPoint{ movingRow, rolledOverCol };
+			ret.Add(rolledOverCellPos);
+		}
+		break;
+	}
+	case Vertical: {
+		const auto movingCol = BlockPhysics::ToFIntPoint(position).Y;
+		const auto rolledOverRows = GetIntegersBetween(previousPosition.X, position.X);
+		for (const auto& rolledOverRow : rolledOverRows) {
+			const auto rolledOverCellPos = FIntPoint{ rolledOverRow, movingCol };
+			ret.Add(rolledOverCellPos);
+		}
+		break;
+	}
+	default: {
+	}
+	}
+	return ret;
+}
+
+TSet<int> MunchickenRollAction::GetIntegersBetween(float bound1, float bound2)
+{
+	// Want to output N s.t. lowerBound <= N < upperBound
+
+	float lowerBound = FGenericPlatformMath::Min(bound1, bound2);
+	float upperBound = FGenericPlatformMath::Max(bound1, bound2);
+	int lowerIntBound = FGenericPlatformMath::CeilToInt(lowerBound);
+	int upperIntBound = FGenericPlatformMath::CeilToInt(upperBound);
+
+	TSet<int> ret;
+	for (int i = lowerIntBound; i < upperIntBound; i++)
+		ret.Add(i);
+	return ret;
+}
+
+void MunchickenRollAction::DestroyBlocksInBackground(const TSet<FIntPoint>& destroyPositions)
+{
+	for (const auto& destroyPosition : destroyPositions) {
+		UE_LOG(LogTemp, Display, TEXT("destroyed by munchicken at (%d, %d)"), destroyPosition.X, destroyPosition.Y);
+	}
+	blockPhysics.DestroyBlocksInBackgroundAt(destroyPositions, TSet<Block>{Block::MUNCHICKEN});
+}
+
+bool MunchickenRollAction::IsOutOfTheMap() const
+{
+	const auto rowNum = blockPhysics.GetNumRows();
+	const auto colNum = blockPhysics.GetNumCols();
+	const auto square = MyMathUtils::Square(FIntPoint(0, 0), FIntPoint(rowNum-1, colNum-1));
+	const auto rolledOverCellPositions = GetCellPositionsRolledOver();
+	for (const auto& rolledOverCellPosition : rolledOverCellPositions) {
+		if (!square.Includes(rolledOverCellPosition))
+			return true;
+	}
+	return false;
+}
+
+const FIntPoint GetsDestroyedInBackgroundBlockAction::INVALID_POSITION = { INT_MIN, INT_MIN };
