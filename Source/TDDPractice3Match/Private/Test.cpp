@@ -58,13 +58,13 @@ bool IfNoMatchOnSwipeThenBlocksShouldReturn::RunTest(const FString& Parameters) 
 	const auto swipeMoveTime = blockPhysics.GRID_SIZE / blockPhysics.SWIPE_MOVE_SPEED;
 	blockPhysics.Tick(swipeMoveTime + TestUtils::veryShortTime);
 	const auto blockMatrixAfterSwipe = blockPhysics.GetBlockMatrix();
-	if (!TestUtils::AreIdenticalExcept(blockMatrix, blockMatrixAfterSwipe, movingBlockPositions))
+	if (!TestUtils::AreAlmostIdenticalAsExpected(blockMatrix, blockMatrixAfterSwipe, movingBlockPositions))
 		return false;
 
 	// After returning back animation end
 	blockPhysics.Tick(swipeMoveTime + TestUtils::veryShortTime);
 	const auto blockMatrixAfterSwipeReturn = blockPhysics.GetBlockMatrix();
-	if (!TestUtils::AreIdenticalExcept(blockMatrix, blockMatrixAfterSwipeReturn, TArray<FIntPoint>()))
+	if (!TestUtils::AreAlmostIdenticalAsExpected(blockMatrix, blockMatrixAfterSwipeReturn, TArray<FIntPoint>()))
 		return false;
 
 	return true;
@@ -96,7 +96,7 @@ bool OnSwipeMatchCheckShouldOccurTest(int tickDivider) {
 	const auto swipeMoveTime = blockPhysics.GRID_SIZE / blockPhysics.SWIPE_MOVE_SPEED;
 	for (int i = 0; i < tickDivider - 1; i++) {
 		blockPhysics.Tick(swipeMoveTime / tickDivider);
-		if (!TestUtils::AreIdenticalExcept(blockPhysics.GetBlockMatrix(), blockMatrix, TArray<FIntPoint>{swipeStart, swipeEnd}))
+		if (!TestUtils::AreAlmostIdenticalAsExpected(blockPhysics.GetBlockMatrix(), blockMatrix, TArray<FIntPoint>{swipeStart, swipeEnd}))
 			return false;
 	}
 
@@ -112,7 +112,7 @@ bool OnSwipeMatchCheckShouldOccurTest(int tickDivider) {
 		blockPhysics.Tick(blockPhysics.DESTROY_ANIMATION_TIME / tickDivider);
 		if (!TestUtils::IsCorrectlyGettingDestroyed(blockPhysics, matchedBlockPositions))
 			return false;
-		if (!TestUtils::AreIdenticalExcept(blockPhysics.GetBlockMatrix(), blockMatrix, matchedAndSwipedBlockPositions))
+		if (!TestUtils::AreAlmostIdenticalAsExpected(blockPhysics.GetBlockMatrix(), blockMatrix, matchedAndSwipedBlockPositions))
 			return false;
 	}
 
@@ -121,7 +121,7 @@ bool OnSwipeMatchCheckShouldOccurTest(int tickDivider) {
 	if (!TestUtils::IsCorrectlyEmpty(blockPhysics, matchedBlockPositions))
 		return false;
 	const auto shouldBeSpawnedCols = TArray<int>{ 0, 1, 2 };
-	if (!TestUtils::AreNewBlocksSpawnedAtTop(blockPhysics, shouldBeSpawnedCols))
+	if (!TestUtils::AreNewBlocksSpawnedAtTopAsExpected(blockPhysics, shouldBeSpawnedCols))
 		return false;
 
 	// After sufficient time to fall
@@ -129,9 +129,9 @@ bool OnSwipeMatchCheckShouldOccurTest(int tickDivider) {
 		blockPhysics.Tick(TestUtils::GetFallTime(blockPhysics, 1) / tickDivider);
 	}
 	blockPhysics.Tick(TestUtils::GetFallTime(blockPhysics, 1) / tickDivider + TestUtils::veryShortTime);
-	if (!TestUtils::AreIdenticalExcept(blockPhysics.GetBlockMatrix(), blockMatrix, matchedAndSwipedBlockPositions))
+	if (!TestUtils::AreAlmostIdenticalAsExpected(blockPhysics.GetBlockMatrix(), blockMatrix, matchedAndSwipedBlockPositions))
 		return false;
-	if (!TestUtils::AllBlocksAreFilled(blockPhysics.GetBlockMatrix()))
+	if (!TestUtils::AllBlocksAreFilledAsExpected(blockPhysics.GetBlockMatrix()))
 		return false;
 
 	return true;
@@ -233,7 +233,7 @@ bool TestUtils::IsCorrectlyEmpty(const BlockPhysics& blockPhysics, const TArray<
 	return true;
 }
 
-bool TestUtils::AreNewBlocksSpawnedAtTop(const BlockPhysics& blockPhysics, const TArray<int>& newBlockSpawnExpectedCols)
+bool TestUtils::AreNewBlocksSpawnedAtTopAsExpected(const BlockPhysics& blockPhysics, const TArray<int>& newBlockSpawnExpectedCols)
 {
 	for (int colIndex = 0; colIndex < blockPhysics.GetNumRows(); colIndex++) {
 		const auto pos = FIntPoint{ -1,colIndex };
@@ -254,7 +254,7 @@ bool TestUtils::AreNewBlocksSpawnedAtTop(const BlockPhysics& blockPhysics, const
 	return true;
 }
 
-bool TestUtils::AreNewBlocksSpawned(const BlockPhysics& blockPhysics, int colToInspect, int expectedNewBlocksCount)
+bool TestUtils::AreNewBlocksSpawnedAsExpected(const BlockPhysics& blockPhysics, int colToInspect, int expectedNewBlocksCount)
 {
 	for (int i = -1; i >= -expectedNewBlocksCount; i--) {
 		if (!blockPhysics.ExistsBlockNear(FIntPoint{ i, colToInspect }, blockPhysics.GRID_SIZE/3.f)) {
@@ -266,7 +266,17 @@ bool TestUtils::AreNewBlocksSpawned(const BlockPhysics& blockPhysics, int colToI
 	return true;
 }
 
-bool TestUtils::AreIdenticalExcept(const BlockMatrix& currentMatrix, const BlockMatrix& originalMatrix, const TArray<FIntPoint>& exceptionalPositions)
+bool TestUtils::AreNewBlocksNotSpawnedAsExpected(const BlockPhysics& blockPhysics, int colToInspect)
+{
+	if (blockPhysics.ExistsBlockNear(FIntPoint{ -1, colToInspect }, blockPhysics.GRID_SIZE / 3.f)) {
+		UE_LOG(LogTemp, Error, TEXT("Block should not exist at (%d,%d) but present"),
+			-1, colToInspect);
+		return false;
+	}
+	return true;
+}
+
+bool TestUtils::AreAlmostIdenticalAsExpected(const BlockMatrix& currentMatrix, const BlockMatrix& originalMatrix, const TArray<FIntPoint>& exceptionalPositions)
 {
 	const auto numRows = currentMatrix.GetNumRows();
 	const auto numCols = currentMatrix.GetNumCols();
@@ -287,7 +297,7 @@ bool TestUtils::AreIdenticalExcept(const BlockMatrix& currentMatrix, const Block
 	return true;
 }
 
-bool TestUtils::AllBlocksAreFilled(const BlockMatrix& blockMatrix)
+bool TestUtils::AllBlocksAreFilledAsExpected(const BlockMatrix& blockMatrix)
 {
 	const auto numRow = blockMatrix.GetNumRows();
 	const auto numCol = blockMatrix.GetNumCols();
@@ -341,11 +351,11 @@ bool MultipleNewBlocksShouldBeGenerated::RunTest(const FString& Parameters) {
 	// After destroy animation end
 	blockPhysics.Tick(blockPhysics.DESTROY_ANIMATION_TIME + TestUtils::veryShortTime);
 	const auto expectedNewBlocksCount = 3;
-	if (!TestUtils::AreNewBlocksSpawned(blockPhysics, swipeColumn, expectedNewBlocksCount))
+	if (!TestUtils::AreNewBlocksSpawnedAsExpected(blockPhysics, swipeColumn, expectedNewBlocksCount))
 		return false;
 	// After falling end
 	blockPhysics.Tick(TestUtils::GetFallTime(blockPhysics, 3) + TestUtils::veryShortTime);
-	if (!TestUtils::AllBlocksAreFilled(blockPhysics.GetBlockMatrix()))
+	if (!TestUtils::AllBlocksAreFilledAsExpected(blockPhysics.GetBlockMatrix()))
 		return false;
 	return true;
 }
@@ -371,7 +381,7 @@ bool MunchickenShouldBeGenerated::RunTest(const FString& Parameters) {
 	const auto expectedMunchickenSpawnPosition = FIntPoint{ 1, 2 };
 	if (!TestUtils::IsExpectedBlockSpawnedAt(blockPhysics.GetBlockMatrix(), expectedMunchickenSpawnPosition, Block::MUNCHICKEN))
 		return false;
-	if (!TestUtils::AreNewBlocksSpawned(blockPhysics, 1, 2) || !TestUtils::AreNewBlocksSpawned(blockPhysics, 2, 1))
+	if (!TestUtils::AreNewBlocksSpawnedAsExpected(blockPhysics, 1, 2) || !TestUtils::AreNewBlocksSpawnedAsExpected(blockPhysics, 2, 1))
 		return false;
 	// After falling end
 	blockPhysics.Tick(TestUtils::GetFallTime(blockPhysics, 1) + TestUtils::veryShortTime);
@@ -395,18 +405,43 @@ bool SwipeOnMunchickenShouldRollIt::RunTest(const FString& Parameters) {
 	auto blockPhysics = BlockPhysics(blockMatrix, newBlockGenerator);
 	// Swipe
 	blockPhysics.RecieveSwipeInput(swipeStart, swipeEnd);
-	auto munchickenRollTrace = TArray<FIntPoint>{};
-	munchickenRollTrace.Add(swipeStart);
 	const auto numGridsToGo = 3;
 	// for each cells this munchicken enter
 	for (int i = 0; i < numGridsToGo; i++) {
 		blockPhysics.Tick((blockPhysics.GRID_SIZE / blockPhysics.ROLL_SPEED) + TestUtils::veryShortTime);
 		const auto munchickenPreviousPosition = swipeStart + swipeDirectionVec*i;
-		if (!TestUtils::AreNewBlocksSpawned(blockPhysics, munchickenPreviousPosition.Y, 1))
+		if (!TestUtils::AreNewBlocksSpawnedAsExpected(blockPhysics, munchickenPreviousPosition.Y, 1))
 			return false;
-		const auto munchickenCurrentPosition = swipeStart + swipeDirectionVec*(i+1);
-		munchickenRollTrace.Add(munchickenCurrentPosition);
 	}
 
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(MunchickenVerticalRollShouldNotSpawnNewBlocks, "Board.OnSwipe.Munchicken vertical roll should not spawn new blocks", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool MunchickenVerticalRollShouldNotSpawnNewBlocks::RunTest(const FString& Parameters) {
+	// Setup
+	const auto swipeStart = FIntPoint{ 2, 2 };
+	const auto swipeEnd = FIntPoint{ 1, 2 };
+	const auto swipeDirectionVec = FIntPoint{ -1, 0 };
+	const auto movingColIndex = 2;
+	auto blockMatrix = TestUtils::munchickenRollTest;
+	auto counter = 0;
+	const auto newBlockGenerator = [&counter]() -> int {
+		return counter++;
+	};
+	auto blockPhysics = BlockPhysics(blockMatrix, newBlockGenerator);
+	// Swipe
+	blockPhysics.RecieveSwipeInput(swipeStart, swipeEnd);
+	const auto numGridsToGo = 3;
+	// for each cells this munchicken enter
+	for (int i = 0; i < numGridsToGo-1; i++) {
+		blockPhysics.Tick((blockPhysics.GRID_SIZE / blockPhysics.ROLL_SPEED) + TestUtils::veryShortTime);
+		if (!TestUtils::AreNewBlocksNotSpawnedAsExpected(blockPhysics, movingColIndex))
+			return false;
+	}
+	// when this munchicken gets destroyed
+	blockPhysics.Tick((blockPhysics.GRID_SIZE / blockPhysics.ROLL_SPEED) + TestUtils::veryShortTime);
+	if (!TestUtils::AreNewBlocksSpawnedAsExpected(blockPhysics, movingColIndex, 3))
+		return false;
 	return true;
 }

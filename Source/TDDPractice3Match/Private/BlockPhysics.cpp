@@ -46,7 +46,7 @@ void BlockPhysics::TickBlockActions(float deltaSeconds)
 	for (auto& block : physicalBlocks) {
 		block.currentAction->Tick(deltaSeconds);
 		if (block.currentAction->IsJustCompleted()) {
-			UE_LOG(LogTemp, Display, TEXT("action completed. type: %s"), *PrettyPrint(block.currentAction->GetType()));
+			UE_LOG(LogTemp, Display, TEXT("action completed. Action type: %s, block type: %s"), *PrettyPrint(block.currentAction->GetType()), *PrettyPrint(block.block));
 		}
 	}
 }
@@ -125,6 +125,11 @@ void BlockPhysics::SetFallingActionsAndGenerateNewBlocks()
 		FIntPoint PopLowest() {
 			return FIntPoint{ lowestRow--, col };
 		}
+		void PopUpTo(float rowCoordinate) {
+			while (lowestRow >= static_cast<int>(rowCoordinate)) {
+				lowestRow--;
+			}
+		}
 		int col;
 		int lowestRow;
 	};
@@ -148,6 +153,11 @@ void BlockPhysics::SetFallingActionsAndGenerateNewBlocks()
 			}
 			else {
 				auto& currentBlock = blocksInCol.PopLowest();
+				if (currentBlock.block == Block::MUNCHICKEN) {
+					positionsInCol.PopUpTo(currentBlock.currentAction->GetPosition().X);
+					continue;
+				}
+
 				if (currentBlock.currentAction->GetPosition() != destination)
 					MakeBlockFallToDestination(currentBlock, destination);
 			}

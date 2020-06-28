@@ -17,10 +17,11 @@ public:
 
 	static bool IsCorrectlyGettingDestroyed(const BlockPhysics& blockPhysics, const TArray<FIntPoint>& onlyPositionsThatShouldBeDestroyed);
 	static bool IsCorrectlyEmpty(const BlockPhysics& blockPhysics, const TArray<FIntPoint>& onlyPositionsThatShouldBeEmpty);
-	static bool AreNewBlocksSpawnedAtTop(const BlockPhysics& blockPhysics, const TArray<int>& newBlockSpawnExpectedCols);
-	static bool AreNewBlocksSpawned(const BlockPhysics& blockPhysics, int colToInspect, int expectedNewBlocksCount);
-	static bool AreIdenticalExcept(const BlockMatrix& blockMatrix1, const BlockMatrix& blockMatrix2, const TArray<FIntPoint>& exceptionalPositions);
-	static bool AllBlocksAreFilled(const BlockMatrix& blockMatrix);
+	static bool AreNewBlocksSpawnedAtTopAsExpected(const BlockPhysics& blockPhysics, const TArray<int>& newBlockSpawnExpectedCols);
+	static bool AreNewBlocksSpawnedAsExpected(const BlockPhysics& blockPhysics, int colToInspect, int expectedNewBlocksCount);
+	static bool AreNewBlocksNotSpawnedAsExpected(const BlockPhysics& blockPhysics, int colToInspect);
+	static bool AreAlmostIdenticalAsExpected(const BlockMatrix& blockMatrix1, const BlockMatrix& blockMatrix2, const TArray<FIntPoint>& exceptionalPositions);
+	static bool AllBlocksAreFilledAsExpected(const BlockMatrix& blockMatrix);
 	static bool IsExpectedBlockSpawnedAt(const BlockMatrix& blockMatrix, FIntPoint expectedSpawnPos, Block expectedBlockType);
 
 	static float GetFallTime(const BlockPhysics& blockPhysics, int howManyGridsToFall);
