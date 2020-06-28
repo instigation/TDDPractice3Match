@@ -192,7 +192,9 @@ public:
 	BlockPhysics(BlockPhysics&& other);
 	~BlockPhysics();
 
+public:
 	void Tick(float deltaSeconds);
+private:
 	void TickBlockActions(float deltaSeconds);
 	bool ShouldCheckMatch();
 	bool CheckAndProcessMatch();
@@ -200,6 +202,7 @@ public:
 	void ChangeCompletedActionsToNextActions(bool thereIsAMatch);
 	void SetFallingActionsAndGenerateNewBlocks();
 
+public:
 	void RecieveSwipeInput(FIntPoint swipeStart, FIntPoint swipeEnd);
 
 	constexpr static int MAX_ROW_COL_SIZE = 50;
