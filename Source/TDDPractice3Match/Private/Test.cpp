@@ -61,8 +61,13 @@ bool IfNoMatchOnSwipeThenBlocksShouldReturn::RunTest(const FString& Parameters) 
 	if (!TestUtils::AreAlmostIdenticalAsExpected(blockMatrix, blockMatrixAfterSwipe, movingBlockPositions))
 		return false;
 
+	// During return back animation
+	blockPhysics.Tick(swipeMoveTime / 2.f);
+	if (!TestUtils::IsCorrectlyEmpty(blockPhysics, movingBlockPositions))
+		return false;
+
 	// After returning back animation end
-	blockPhysics.Tick(swipeMoveTime + TestUtils::veryShortTime);
+	blockPhysics.Tick(swipeMoveTime / 2.f + TestUtils::veryShortTime);
 	const auto blockMatrixAfterSwipeReturn = blockPhysics.GetBlockMatrix();
 	if (!TestUtils::AreAlmostIdenticalAsExpected(blockMatrix, blockMatrixAfterSwipeReturn, TArray<FIntPoint>()))
 		return false;

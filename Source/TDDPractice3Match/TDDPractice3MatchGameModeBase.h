@@ -13,5 +13,5 @@ UCLASS()
 class TDDPRACTICE3MATCH_API ATDDPractice3MatchGameModeBase : public AGameModeBase
 {
 	GENERATED_BODY()
-	
+	ATDDPractice3MatchGameModeBase();
 };

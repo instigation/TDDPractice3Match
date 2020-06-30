@@ -3,3 +3,6 @@
 
 #include "TDDPractice3MatchGameModeBase.h"
 
+ATDDPractice3MatchGameModeBase::ATDDPractice3MatchGameModeBase()
+{
+}

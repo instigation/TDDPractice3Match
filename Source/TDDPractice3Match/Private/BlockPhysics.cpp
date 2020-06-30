@@ -30,7 +30,8 @@ BlockPhysics::~BlockPhysics()
 void BlockPhysics::Tick(float deltaSeconds)
 {
 	elapsedTime += deltaSeconds;
-	UE_LOG(LogTemp, Display, TEXT("Tick start. Elapsed time: %f"), elapsedTime);
+	if(enableTickDebugLog)
+		UE_LOG(LogTemp, Display, TEXT("Tick start. Elapsed time: %f"), elapsedTime);
 	TickBlockActions(deltaSeconds);
 	auto thereIsAMatch = false;
 	if (ShouldCheckMatch()) {
@@ -136,7 +137,8 @@ void BlockPhysics::SetFallingActionsAndGenerateNewBlocks()
 
 	for (int col = 0; col < numCols; col++) {
 		if (NumOccupiedCellsInColumn(col) == numRows) {
-			UE_LOG(LogTemp, Display, TEXT("Column %d has all cells occupied"), col);
+			if(enableTickDebugLog)
+				UE_LOG(LogTemp, Display, TEXT("Column %d has all cells occupied"), col);
 			continue;
 		}
 
@@ -186,11 +188,17 @@ int BlockPhysics::NumOccupiedCellsInColumn(int colIndex) const
 void BlockPhysics::RecieveSwipeInput(FIntPoint swipeStart, FIntPoint swipeEnd)
 {
 	auto startBlock = GetTopmostBlockAt(swipeStart);
+	if (startBlock == nullptr) {
+		UE_LOG(LogTemp, Warning, TEXT("RecieveSwipeInput precondition: block should exist at start position: (%d, %d)"),
+			swipeStart.X, swipeStart.Y);
+		return;
+	}
+
 	if (startBlock->block != Block::MUNCHICKEN) {
 		auto endBlock = GetTopmostBlockAt(swipeEnd);
-		if ((startBlock == nullptr) || (endBlock == nullptr)) {
-			UE_LOG(LogTemp, Warning, TEXT("RecieveSwipeInput precondition: blocksAtDestroyPosition should exist at start and end points: (%d, %d)->(%d, %d)"),
-				swipeStart.X, swipeStart.Y, swipeEnd.X, swipeEnd.Y);
+		if (endBlock == nullptr) {
+			UE_LOG(LogTemp, Warning, TEXT("RecieveSwipeInput precondition: block should exist at end position if swiping block is not munchicken: (%d, %d)"),
+				swipeEnd.X, swipeEnd.Y);
 			return;
 		}
 		startBlock->currentAction = MakeUnique<SwipeMoveBlockAction>(swipeStart, swipeEnd);
@@ -269,6 +277,15 @@ void BlockPhysics::DestroyBlocksInBackgroundAt(const TSet<FIntPoint>& destroyPos
 			}
 		}
 	}
+}
+
+TArray<PhysicalBlockSnapShot> BlockPhysics::GetPhysicalBlockSnapShots() const
+{
+	auto ret = TArray<PhysicalBlockSnapShot>();
+	for (const auto& block : physicalBlocks) {
+		ret.Add(block.GetSnapShot());
+	}
+	return ret;
 }
 
 PhysicalBlock* BlockPhysics::GetTopmostBlockAt(FIntPoint position)
@@ -393,6 +410,11 @@ PhysicalBlock::PhysicalBlock(PhysicalBlock&& other)
 
 }
 
+PhysicalBlockSnapShot PhysicalBlock::GetSnapShot() const
+{
+	return PhysicalBlockSnapShot(id, block, currentAction->GetType(), currentAction->GetPosition());
+}
+
 int PhysicalBlock::lastIssuedId = -1;
 
 void GetsDestroyedBlockAction::Tick(float deltaSeconds)
@@ -473,7 +495,7 @@ void SwipeReturnBlockAction::Tick(float deltaSeconds)
 	else {
 		auto moveDirection = FVector2D(destPos - initialPos);
 		moveDirection.Normalize();
-		position += moveDirection * BlockPhysics::SWIPE_MOVE_SPEED;
+		position += moveDirection * moveDistance;
 	}
 }
 

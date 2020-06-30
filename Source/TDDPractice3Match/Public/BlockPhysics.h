@@ -75,6 +75,7 @@ public:
 	virtual bool ShouldCheckMatch() const { return false; }
 	virtual bool IsEligibleForMatching() const { return isJustCompleted; }
 	virtual TUniquePtr<BlockAction> GetNextAction(bool thereIsAMatch) const { return MakeUnique<IdleBlockAction>(position); }
+	virtual FVector2D GetOccupiedPosition() const override { return initialPos; }
 
 	virtual ActionType GetType() const { return ActionType::SwipeReturn; }
 private:
@@ -163,6 +164,15 @@ private:
 	const static FIntPoint INVALID_POSITION;
 };
 
+class PhysicalBlockSnapShot {
+public:
+	PhysicalBlockSnapShot(int id, Block block, ActionType actionType, FVector2D position) : id(id), block(block), actionType(actionType), position(position) {}
+	int id;
+	Block block;
+	ActionType actionType;
+	FVector2D position;
+};
+
 
 class PhysicalBlock {
 public:
@@ -171,13 +181,13 @@ public:
 	PhysicalBlock(const PhysicalBlock& other) = delete;
 	PhysicalBlock(PhysicalBlock&& other);
 	int GetId() const { return id; }
+	PhysicalBlockSnapShot GetSnapShot() const;
 	Block block;
 	TUniquePtr<BlockAction> currentAction;
 private:
 	int id;
 	static int lastIssuedId;
 };
-
 
 class BlockMatrix;
 
@@ -205,6 +215,9 @@ private:
 public:
 	void RecieveSwipeInput(FIntPoint swipeStart, FIntPoint swipeEnd);
 
+	void DisableTickDebugLog() { enableTickDebugLog = false; }
+	bool enableTickDebugLog = true;
+
 	constexpr static int MAX_ROW_COL_SIZE = 50;
 	constexpr static float DELTA_COSINE = 0.001f;
 	constexpr static float DELTA_DISTANCE = 0.0001f;
@@ -222,6 +235,7 @@ public:
 
 	void DestroyBlocksInBackgroundAt(const TSet<FIntPoint>& destroyPositions, const TSet<Block>& exceptionalBlocks);
 
+	TArray<PhysicalBlockSnapShot> GetPhysicalBlockSnapShots() const;
 	BlockMatrix GetBlockMatrix() const;
 	int GetNumRows() const { return numRows; }
 	int GetNumCols() const { return numCols; }
