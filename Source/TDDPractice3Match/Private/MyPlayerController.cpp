@@ -124,37 +124,47 @@ void AMyPlayerController::HandleLeftMouseInput(float value)
 
 bool AMyPlayerController::CannotBeNormalizedAsHorizontalOrVertical(FIntPoint dragDirection)
 {
-	// TODO
-	return false;
+	return NormalizeAsHorizontalOrVertical(dragDirection) == FIntPoint{ 0, 0 };
 }
 
 FIntPoint AMyPlayerController::NormalizeAsHorizontalOrVertical(FIntPoint dragDirection)
 {
-	// TODO
-	return FIntPoint{ 1, 0 };
+	if (dragDirection.Size() == 0)
+		return FIntPoint{ 0, 0 };
+
+	auto dragDirectionAbs = FVector2D(FGenericPlatformMath::Abs(dragDirection.X), FGenericPlatformMath::Abs(dragDirection.Y));
+	dragDirectionAbs.Normalize();
+	const auto xAxisVector = FVector2D(1.f, 0.f);
+	if (FGenericPlatformMath::Abs(FVector2D::CrossProduct(xAxisVector, dragDirectionAbs)) <= 0.5f)
+		return FIntPoint{ dragDirection.X / FGenericPlatformMath::Abs(dragDirection.X), 0 };
+	const auto yAxisVector = FVector2D(0.f, 1.f);
+	if (FGenericPlatformMath::Abs(FVector2D::CrossProduct(yAxisVector, dragDirectionAbs)) <= 0.5f)
+		return FIntPoint{ 0, dragDirection.Y / FGenericPlatformMath::Abs(dragDirection.Y) };
+
+	return FIntPoint{ 0, 0 };
 }
 
 FIntPoint AMyPlayerController::WorldPositionToCellCoordinate(FVector position)
 {
 	return FIntPoint{
-		FGenericPlatformMath::FloorToInt((position.X / GRID_SIZE) + 0.5),
-		FGenericPlatformMath::FloorToInt((position.Z / GRID_SIZE) + 0.5)
+		FGenericPlatformMath::FloorToInt((-position.Z / GRID_SIZE) + 0.5),
+		FGenericPlatformMath::FloorToInt((position.X / GRID_SIZE) + 0.5)
 	};
 }
 
 FVector AMyPlayerController::CellCoordinaeToWorldPosition(FVector2D coordinate)
 {
-	return FVector{ coordinate.X * GRID_SIZE, DEFAULT_DEPTH, coordinate.Y * GRID_SIZE };
+	return FVector{ coordinate.Y * GRID_SIZE, DEFAULT_DEPTH, -coordinate.X * GRID_SIZE };
 }
 
 void AMyPlayerController::SpawnInitialBlocks()
 {
-	if (!GEngine)
+	if (GEngine == nullptr)
 		return;
 
 	GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, "Spawn Initial Blocks");
 
-	if (!blockPhysics)
+	if (blockPhysics == nullptr)
 		return;
 
 	const auto physicalBlockSnapShots = blockPhysics->GetPhysicalBlockSnapShots();
@@ -166,17 +176,17 @@ void AMyPlayerController::SpawnInitialBlocks()
 void AMyPlayerController::SpawnBlock(const PhysicalBlockSnapShot& physicalBlockSnapShot)
 {
 	auto world = GetWorld();
-	if (!world)
+	if (world == nullptr)
 		return;
 	auto spawnPosition = CellCoordinaeToWorldPosition(physicalBlockSnapShot.position);
-	auto spawnRotation = FRotator();
+	auto spawnRotation = FRotator::ZeroRotator;
 	auto spawnResult = world->SpawnActor(blockActorBlueprintType[static_cast<int>(physicalBlockSnapShot.block)].Get(), &spawnPosition, &spawnRotation);
 	idToBlockActorMap.Add(physicalBlockSnapShot.id, spawnResult);
 }
 
 void AMyPlayerController::UpdateBlockStatus(AActor* pBlock, const PhysicalBlockSnapShot& physicalBlockSnapShot)
 {
-	if (!pBlock)
+	if (pBlock == nullptr)
 		return;
 
 	pBlock->SetActorLocation(CellCoordinaeToWorldPosition(physicalBlockSnapShot.position));
@@ -184,7 +194,7 @@ void AMyPlayerController::UpdateBlockStatus(AActor* pBlock, const PhysicalBlockS
 
 void AMyPlayerController::UpdateBlocks()
 {
-	if (!blockPhysics)
+	if (blockPhysics == nullptr)
 		return;
 
 	auto notUpdatedBlockIds = TSet<int>();
@@ -205,19 +215,21 @@ void AMyPlayerController::UpdateBlocks()
 	}
 
 	for (const auto blockId : notUpdatedBlockIds) {
-		const auto ppBlockActor = idToBlockActorMap.Find(blockId);
-		if (ppBlockActor == nullptr)
-			continue;
-
-		DeleteBlock(*ppBlockActor);
+		DeleteBlock(blockId);
 	}
 }
 
-void AMyPlayerController::DeleteBlock(AActor* pBlock)
+void AMyPlayerController::DeleteBlock(int blockId)
 {
-	if (!pBlock)
+	const auto ppBlockActor = idToBlockActorMap.Find(blockId);
+	if (ppBlockActor == nullptr)
+		return;
+
+	auto pBlock = *ppBlockActor;
+	if (pBlock == nullptr)
 		return;
 
 	pBlock->Destroy();
+	idToBlockActorMap.Remove(blockId);
 }
 

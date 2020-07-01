@@ -62,7 +62,7 @@ private:
 	void SpawnBlock(const PhysicalBlockSnapShot& physicalBlockSnapShot);
 	void UpdateBlockStatus(AActor* pBlock, const PhysicalBlockSnapShot& updatedPhysicalBlock);
 	void UpdateBlocks();
-	void DeleteBlock(AActor* pBlock);
+	void DeleteBlock(int blockId);
 
 
 	BlockPhysics* blockPhysics;
