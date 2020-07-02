@@ -169,27 +169,41 @@ void AMyPlayerController::SpawnInitialBlocks()
 
 	const auto physicalBlockSnapShots = blockPhysics->GetPhysicalBlockSnapShots();
 	for (const auto& physicalBlockSnapShot : physicalBlockSnapShots) {
-		SpawnBlock(physicalBlockSnapShot);
+		SpawnBlockActor(physicalBlockSnapShot);
 	}
 }
 
-void AMyPlayerController::SpawnBlock(const PhysicalBlockSnapShot& physicalBlockSnapShot)
+void AMyPlayerController::SpawnBlockActor(const PhysicalBlockSnapShot& physicalBlockSnapShot)
 {
 	auto world = GetWorld();
 	if (world == nullptr)
 		return;
 	auto spawnPosition = CellCoordinaeToWorldPosition(physicalBlockSnapShot.position);
 	auto spawnRotation = FRotator::ZeroRotator;
-	auto spawnResult = world->SpawnActor(blockActorBlueprintType[static_cast<int>(physicalBlockSnapShot.block)].Get(), &spawnPosition, &spawnRotation);
+	auto classToSpawn =
+		physicalBlockSnapShot.actionType != ActionType::GetsDestroyed ?
+		blockActorBlueprintType[static_cast<int>(physicalBlockSnapShot.block)].Get() :
+		explosionActorBlutprintType.Get();
+	auto spawnResult = world->SpawnActor(classToSpawn, &spawnPosition, &spawnRotation);
 	idToBlockActorMap.Add(physicalBlockSnapShot.id, spawnResult);
+	idToActionTypeMap.Add(physicalBlockSnapShot.id, physicalBlockSnapShot.actionType);
 }
 
-void AMyPlayerController::UpdateBlockStatus(AActor* pBlock, const PhysicalBlockSnapShot& physicalBlockSnapShot)
+void AMyPlayerController::UpdateBlockStatus(AActor* pBlockActor, const PhysicalBlockSnapShot& physicalBlockSnapShot)
 {
-	if (pBlock == nullptr)
+	if (pBlockActor == nullptr)
 		return;
 
-	pBlock->SetActorLocation(CellCoordinaeToWorldPosition(physicalBlockSnapShot.position));
+	if (physicalBlockSnapShot.actionType != ActionType::GetsDestroyed)
+		pBlockActor->SetActorLocation(CellCoordinaeToWorldPosition(physicalBlockSnapShot.position));
+	else {
+		auto needToChangeBlockActorToExplosion = (idToActionTypeMap.FindRef(physicalBlockSnapShot.id) != physicalBlockSnapShot.actionType);
+		if (needToChangeBlockActorToExplosion) {
+			DeleteBlockActor(physicalBlockSnapShot.id);
+			SpawnBlockActor(physicalBlockSnapShot);
+		}
+	}
+	idToActionTypeMap.Emplace(physicalBlockSnapShot.id, physicalBlockSnapShot.actionType);
 }
 
 void AMyPlayerController::UpdateBlocks()
@@ -206,20 +220,20 @@ void AMyPlayerController::UpdateBlocks()
 	for (const auto& physicalBlockSnapShot : physicalBlockSnapShots) {
 		const auto ppBlockActor = idToBlockActorMap.Find(physicalBlockSnapShot.id);
 		if (ppBlockActor == nullptr) {
-			SpawnBlock(physicalBlockSnapShot);
+			SpawnBlockActor(physicalBlockSnapShot);
 		}
-		else {
+		else if (ppBlockActor != nullptr){
 			UpdateBlockStatus(*ppBlockActor, physicalBlockSnapShot);
 			notUpdatedBlockIds.Remove(physicalBlockSnapShot.id);
 		}
 	}
 
 	for (const auto blockId : notUpdatedBlockIds) {
-		DeleteBlock(blockId);
+		DeleteBlockActor(blockId);
 	}
 }
 
-void AMyPlayerController::DeleteBlock(int blockId)
+void AMyPlayerController::DeleteBlockActor(int blockId)
 {
 	const auto ppBlockActor = idToBlockActorMap.Find(blockId);
 	if (ppBlockActor == nullptr)
@@ -231,5 +245,5 @@ void AMyPlayerController::DeleteBlock(int blockId)
 
 	pBlock->Destroy();
 	idToBlockActorMap.Remove(blockId);
+	idToActionTypeMap.Remove(blockId);
 }
-

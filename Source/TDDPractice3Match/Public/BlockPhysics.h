@@ -225,7 +225,7 @@ public:
 	constexpr static float GRAVITY_ACCELERATION = 10.0f;
 	constexpr static float SWIPE_MOVE_SPEED = 1.0f;
 	constexpr static float ROLL_SPEED = SWIPE_MOVE_SPEED;
-	constexpr static float DESTROY_ANIMATION_TIME = 0.2f;
+	constexpr static float DESTROY_ANIMATION_TIME = 0.35f;
 
 	bool IsEmpty(FIntPoint position) const;
 	bool ExistsBlockBetween(FIntPoint startPos, FIntPoint endPos) const;

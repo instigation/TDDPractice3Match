@@ -10,6 +10,7 @@ class BlockPhysics;
 class PhysicalBlockSnapShot;
 class AActor;
 enum class Block;
+enum class ActionType;
 
 /**
  * 
@@ -52,6 +53,8 @@ public:
 	constexpr static int NUM_NORMAL_BLOCK_TYPES = 6;
 	UPROPERTY(EditAnywhere, Category = Block)
 	TSubclassOf<class AActor> blockActorBlueprintType[NUM_NORMAL_BLOCK_TYPES];
+	UPROPERTY(EditAnywhere, Category = Block)
+	TSubclassOf<class AActor> explosionActorBlutprintType;
 	UPROPERTY(EditAnywhere, Category = BlockOrganization)
 	float GRID_SIZE = 60.0f;
 	UPROPERTY(EditAnywhere, Category = BlockOrganization)
@@ -59,13 +62,14 @@ public:
 
 private:
 	void SpawnInitialBlocks();
-	void SpawnBlock(const PhysicalBlockSnapShot& physicalBlockSnapShot);
+	void SpawnBlockActor(const PhysicalBlockSnapShot& physicalBlockSnapShot);
 	void UpdateBlockStatus(AActor* pBlock, const PhysicalBlockSnapShot& updatedPhysicalBlock);
 	void UpdateBlocks();
-	void DeleteBlock(int blockId);
+	void DeleteBlockActor(int blockId);
 
 
 	BlockPhysics* blockPhysics;
 	TMap<int, AActor*> idToBlockActorMap;
+	TMap<int, ActionType> idToActionTypeMap;
 #pragma endregion
 };
