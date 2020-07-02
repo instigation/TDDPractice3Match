@@ -22,6 +22,7 @@ enum class TDDPRACTICE3MATCH_API Block {
 FString PrettyPrint(Block block);
 
 TArray<Block> GetNormalBlocks();
+bool IsSpecial(Block block);
 
 enum class TDDPRACTICE3MATCH_API BlockColor {
     ZERO,

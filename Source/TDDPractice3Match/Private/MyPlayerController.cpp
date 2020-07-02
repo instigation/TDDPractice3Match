@@ -23,9 +23,9 @@ AMyPlayerController::AMyPlayerController()
 	DefaultMouseCursor = EMouseCursor::Crosshairs;
 
 	blockPhysics = new BlockPhysics(BlockMatrix(TArray<TArray<Block>>{
-		{Block::ONE, Block::TWO, Block::THREE},
+		{Block::TWO, Block::TWO, Block::THREE},
 		{ Block::ONE, Block::TWO, Block::THREE },
-		{ Block::TWO, Block::FOUR, Block::ONE }
+		{ Block::TWO, Block::THREE, Block::ONE }
 	}));
 	blockPhysics->DisableTickDebugLog();
 }
@@ -180,13 +180,18 @@ void AMyPlayerController::SpawnBlockActor(const PhysicalBlockSnapShot& physicalB
 		return;
 	auto spawnPosition = CellCoordinaeToWorldPosition(physicalBlockSnapShot.position);
 	auto spawnRotation = FRotator::ZeroRotator;
-	auto classToSpawn =
-		physicalBlockSnapShot.actionType != ActionType::GetsDestroyed ?
-		blockActorBlueprintType[static_cast<int>(physicalBlockSnapShot.block)].Get() :
-		explosionActorBlutprintType.Get();
-	auto spawnResult = world->SpawnActor(classToSpawn, &spawnPosition, &spawnRotation);
+	auto spawnResult = world->SpawnActor(GetBlockActorClassToSpawn(physicalBlockSnapShot), &spawnPosition, &spawnRotation);
 	idToBlockActorMap.Add(physicalBlockSnapShot.id, spawnResult);
 	idToActionTypeMap.Add(physicalBlockSnapShot.id, physicalBlockSnapShot.actionType);
+}
+
+UClass* AMyPlayerController::GetBlockActorClassToSpawn(const PhysicalBlockSnapShot& physicalBlockSnapShot)
+{
+	if (physicalBlockSnapShot.actionType == ActionType::GetsDestroyed)
+		return explosionActorBlutprintType.Get();
+	if (IsSpecial(physicalBlockSnapShot.block))
+		return specialBlockActorBlueprintType[static_cast<int>(physicalBlockSnapShot.block) - static_cast<int>(Block::MAX_NORMAL) - 1].Get();
+	return blockActorBlueprintType[static_cast<int>(physicalBlockSnapShot.block)].Get();
 }
 
 void AMyPlayerController::UpdateBlockStatus(AActor* pBlockActor, const PhysicalBlockSnapShot& physicalBlockSnapShot)
@@ -194,14 +199,15 @@ void AMyPlayerController::UpdateBlockStatus(AActor* pBlockActor, const PhysicalB
 	if (pBlockActor == nullptr)
 		return;
 
-	if (physicalBlockSnapShot.actionType != ActionType::GetsDestroyed)
-		pBlockActor->SetActorLocation(CellCoordinaeToWorldPosition(physicalBlockSnapShot.position));
+	auto originalActionType = idToActionTypeMap.FindRef(physicalBlockSnapShot.id);
+	auto justStartedGettingDestroyed = (physicalBlockSnapShot.actionType == ActionType::GetsDestroyed) && (originalActionType != ActionType::GetsDestroyed);
+	auto justEndedGettingDestroyed = (physicalBlockSnapShot.actionType != ActionType::GetsDestroyed) && (originalActionType == ActionType::GetsDestroyed);
+	if (justStartedGettingDestroyed || justEndedGettingDestroyed) {
+		DeleteBlockActor(physicalBlockSnapShot.id);
+		SpawnBlockActor(physicalBlockSnapShot);
+	}
 	else {
-		auto needToChangeBlockActorToExplosion = (idToActionTypeMap.FindRef(physicalBlockSnapShot.id) != physicalBlockSnapShot.actionType);
-		if (needToChangeBlockActorToExplosion) {
-			DeleteBlockActor(physicalBlockSnapShot.id);
-			SpawnBlockActor(physicalBlockSnapShot);
-		}
+		pBlockActor->SetActorLocation(CellCoordinaeToWorldPosition(physicalBlockSnapShot.position));
 	}
 	idToActionTypeMap.Emplace(physicalBlockSnapShot.id, physicalBlockSnapShot.actionType);
 }

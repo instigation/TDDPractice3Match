@@ -53,6 +53,9 @@ public:
 	constexpr static int NUM_NORMAL_BLOCK_TYPES = 6;
 	UPROPERTY(EditAnywhere, Category = Block)
 	TSubclassOf<class AActor> blockActorBlueprintType[NUM_NORMAL_BLOCK_TYPES];
+	constexpr static int NUM_SPECIAL_BLOCK_TYPES = 1;
+	UPROPERTY(EditAnywhere, Category = Block)
+	TSubclassOf<class AActor> specialBlockActorBlueprintType[NUM_SPECIAL_BLOCK_TYPES];
 	UPROPERTY(EditAnywhere, Category = Block)
 	TSubclassOf<class AActor> explosionActorBlutprintType;
 	UPROPERTY(EditAnywhere, Category = BlockOrganization)
@@ -63,6 +66,7 @@ public:
 private:
 	void SpawnInitialBlocks();
 	void SpawnBlockActor(const PhysicalBlockSnapShot& physicalBlockSnapShot);
+	UClass* GetBlockActorClassToSpawn(const PhysicalBlockSnapShot& physicalBlockSnapShot);
 	void UpdateBlockStatus(AActor* pBlock, const PhysicalBlockSnapShot& updatedPhysicalBlock);
 	void UpdateBlocks();
 	void DeleteBlockActor(int blockId);

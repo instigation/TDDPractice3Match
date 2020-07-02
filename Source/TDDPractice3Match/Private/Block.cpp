@@ -17,6 +17,11 @@ TArray<Block> GetNormalBlocks() {
 	return ret;
 }
 
+bool IsSpecial(Block block)
+{
+	return (block > Block::MAX_NORMAL) && (block < Block::MAX_SPECIAL);
+}
+
 BlockColor GetColor(Block block)
 {
 	return BlockColor(static_cast<int>(block));
