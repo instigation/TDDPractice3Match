@@ -47,7 +47,11 @@ void BlockPhysics::TickBlockActions(float deltaSeconds)
 	for (auto& block : physicalBlocks) {
 		block.currentAction->Tick(deltaSeconds);
 		if (block.currentAction->IsJustCompleted()) {
-			UE_LOG(LogTemp, Display, TEXT("action completed. Action type: %s, block type: %s"), *PrettyPrint(block.currentAction->GetType()), *PrettyPrint(block.block));
+			UE_LOG(LogTemp, Display, TEXT("action completed. Action type: %s, block type: %s, position: %f, %f"), 
+				*PrettyPrint(block.currentAction->GetType()), 
+				*PrettyPrint(block.block), 
+				block.currentAction->GetPosition().X,
+				block.currentAction->GetPosition().Y);
 		}
 	}
 }
@@ -68,11 +72,22 @@ bool BlockPhysics::CheckAndProcessMatch()
 	auto thereIsAMatch = !blockMatrix.HasNoMatch();
 	if (thereIsAMatch) {
 		UE_LOG(LogTemp, Display, TEXT("match occured"));
-		auto matchResult = blockMatrix.ProcessMatch(TSet<FIntPoint>());
+		auto matchResult = blockMatrix.ProcessMatch(GetBlockInflowPositions());
 		StartDestroyingMatchedBlocksAccordingTo(matchResult);
 		SetSpecialBlocksSpawnAccordingTo(matchResult);
 	}
 	return thereIsAMatch;
+}
+
+TSet<FIntPoint> BlockPhysics::GetBlockInflowPositions()
+{
+	auto ret = TSet<FIntPoint>();
+	for (const auto& block : physicalBlocks) {
+		if (block.currentAction->IsJustCompleted() && IsNearLatticePoint(block.currentAction->GetPosition())) {
+			ret.Add(ToFIntPoint(block.currentAction->GetPosition()));
+		}
+	}
+	return ret;
 }
 
 void BlockPhysics::RemoveDeadBlocks()
@@ -380,6 +395,11 @@ void BlockPhysics::MakeBlockFallToDestination(PhysicalBlock& blockStatus, FIntPo
 FIntPoint BlockPhysics::ToFIntPoint(FVector2D position)
 {
 	return FIntPoint{ ToInt(position.X), ToInt(position.Y) };
+}
+
+bool BlockPhysics::IsNearLatticePoint(FVector2D position)
+{
+	return (position - ToFIntPoint(position)).Size() <= DELTA_DISTANCE;
 }
 
 int BlockPhysics::ToInt(float value)

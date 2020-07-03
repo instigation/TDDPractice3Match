@@ -173,11 +173,19 @@ const BlockMatrix TestUtils::blockMatrix5x5 = BlockMatrix(
 	}
 );
 
-const BlockMatrix TestUtils::twoByTwoMatchTest = BlockMatrix{
+const BlockMatrix TestUtils::twoByTwoMatchTest1 = BlockMatrix{
 	TArray<TArray<Block>>{
 		{ Block::ONE, Block::TWO, Block::TWO, Block::ONE, Block::ONE},
 		{ Block::ONE, Block::TWO, Block::THREE, Block::TWO, Block::ONE},
 		{ Block::THREE, Block::ONE, Block::THREE, Block::FOUR, Block::THREE}
+	}
+};
+
+const BlockMatrix TestUtils::twoByTwoMatchTest2 = BlockMatrix{
+	TArray<TArray<Block>>{
+		{Block::ONE, Block::TWO, Block::TWO},
+		{Block::TWO, Block::ONE, Block::TWO},
+		{Block::THREE, Block::FOUR, Block::THREE}
 	}
 };
 
@@ -370,7 +378,7 @@ bool MunchickenShouldBeGenerated::RunTest(const FString& Parameters) {
 	// Setup
 	const auto swipeStart = FIntPoint{ 1, 3 };
 	const auto swipeEnd = FIntPoint{ 1, 2 };
-	auto blockMatrix = TestUtils::twoByTwoMatchTest;
+	auto blockMatrix = TestUtils::twoByTwoMatchTest1;
 	auto blockPhysics = BlockPhysics(blockMatrix);
 	// Swipe
 	blockPhysics.RecieveSwipeInput(swipeStart, swipeEnd);
@@ -391,6 +399,26 @@ bool MunchickenShouldBeGenerated::RunTest(const FString& Parameters) {
 	// After falling end
 	blockPhysics.Tick(TestUtils::GetFallTime(blockPhysics, 1) + TestUtils::veryShortTime);
 	if (!TestUtils::IsExpectedBlockSpawnedAt(blockPhysics.GetBlockMatrix(), FIntPoint{ 1,2 }, Block::MUNCHICKEN))
+		return false;
+
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(MunchickenShouldBeGeneratedAtBlockInflowPosition, "Board.OnSwipe.Munchicken should be generated at block inflow position", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool MunchickenShouldBeGeneratedAtBlockInflowPosition::RunTest(const FString& Parameters) {
+	// Setup
+	const auto swipeStart = FIntPoint{ 1, 0 };
+	const auto swipeEnd = FIntPoint{ 1, 1 };
+	auto blockMatrix = TestUtils::twoByTwoMatchTest2;
+	auto blockPhysics = BlockPhysics(blockMatrix);
+	// Swipe
+	blockPhysics.RecieveSwipeInput(swipeStart, swipeEnd);
+	// After swipe move end
+	blockPhysics.Tick((blockPhysics.GRID_SIZE / blockPhysics.SWIPE_MOVE_SPEED) + TestUtils::veryShortTime);
+	// After destroy animation end
+	blockPhysics.Tick(blockPhysics.DESTROY_ANIMATION_TIME + TestUtils::veryShortTime);
+	const auto expectedMunchickenSpawnPosition = FIntPoint{ 1, 1 };
+	if (!TestUtils::IsExpectedBlockSpawnedAt(blockPhysics.GetBlockMatrix(), expectedMunchickenSpawnPosition, Block::MUNCHICKEN))
 		return false;
 
 	return true;

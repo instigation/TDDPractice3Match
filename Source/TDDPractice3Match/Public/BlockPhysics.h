@@ -208,6 +208,7 @@ private:
 	void TickBlockActions(float deltaSeconds);
 	bool ShouldCheckMatch();
 	bool CheckAndProcessMatch();
+	TSet<FIntPoint> GetBlockInflowPositions();
 	void RemoveDeadBlocks();
 	void ChangeCompletedActionsToNextActions(bool thereIsAMatch);
 	void SetFallingActionsAndGenerateNewBlocks();
@@ -241,6 +242,7 @@ public:
 	int GetNumCols() const { return numCols; }
 
 	static FIntPoint ToFIntPoint(FVector2D position);
+	static bool IsNearLatticePoint(FVector2D position);
 
 private:
 	const PhysicalBlock* GetTopmostBlockAt(FIntPoint position) const;

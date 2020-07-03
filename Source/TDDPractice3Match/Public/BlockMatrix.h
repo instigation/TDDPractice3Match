@@ -9,12 +9,15 @@
 
 class TDDPRACTICE3MATCH_API MatchResult {
 public:
-	TSet<FIntPoint> GetMatchedPositions() const { return matchedPositions; }
+	TSet<FIntPoint> GetMatchedPositions() const { return allMatchedPositions; }
 	TSet<FIntPoint> GetSpawnPositionsOf(Block block) const;
-	void AddMatchedPosition(FIntPoint matchedPosition) { matchedPositions.Add(matchedPosition); }
-	void AddSpecialBlockSpawn(FIntPoint spawnPosition, Block specialBlockType) { specialBlockSpawnPositions.Add(TPair<FIntPoint, Block>{spawnPosition, specialBlockType}); }
+	void AddMatchedPositions(const TSet<FIntPoint>& matchedPositions);
+	void AddSpecialBlockWith(Block specialBlock, FIntPoint defaultSpawnPosition, const TSet<FIntPoint>& matchedPositions, const TSet<FIntPoint>& specialBlockSpawnCandidatePositions);
 private:
-	TSet<FIntPoint> matchedPositions;
+	void AddMatchedPosition(FIntPoint matchedPosition) { allMatchedPositions.Add(matchedPosition); }
+	void AddSpecialBlockSpawn(FIntPoint spawnPosition, Block specialBlockType) { specialBlockSpawnPositions.Add(TPair<FIntPoint, Block>{spawnPosition, specialBlockType}); }
+
+	TSet<FIntPoint> allMatchedPositions;
 	TSet<TPair<FIntPoint, Block>> specialBlockSpawnPositions;
 };
 
@@ -30,6 +33,7 @@ public:
 	int GetNumRows() const { return numRows; }
 	int GetNumCols() const { return numCols; }
 private:
+	void RemoveBlocksAt(const TSet<FIntPoint>& positions);
 	static int GetRow(FIntPoint point) { return point.X; }
 	static int GetCol(FIntPoint point) { return point.Y; }
 	bool IsOutOfMatrix(FIntPoint point) const;

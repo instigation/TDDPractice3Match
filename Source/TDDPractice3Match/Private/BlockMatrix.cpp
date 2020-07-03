@@ -48,28 +48,31 @@ MatchResult BlockMatrix::ProcessMatch(const TSet<FIntPoint>& specialBlockSpawnCa
 	for (const auto& locationAndFormation : matchedLocationAndFormations) {
 		const auto matchedLocation = locationAndFormation.Key;
 		const auto matchedFormation = locationAndFormation.Value;
+		auto matchedPositions = TSet<FIntPoint>();
 		for (const auto& vector : matchedFormation.vectors) {
-			auto matchedBlockPosition = matchedLocation + vector;
-			auto removedNum = blockMatrix.Remove(matchedBlockPosition);
-			if (removedNum != 1) {
-				UE_LOG(LogTemp, Error, TEXT("Match reported block does not exist or duplicated in block map"));
-			}
-			matchResult.AddMatchedPosition(matchedBlockPosition);
+			matchedPositions.Add(matchedLocation + vector);
 		}
-		if (matchedFormation.NeedSpecialBlockSpawn()) {
-			bool spawnedSpecialBlock = false;
-			for (const auto& spawnCandidatePos : specialBlockSpawnCandidatePositions) {
-				if (matchedFormation.vectors.Contains(spawnCandidatePos)) {
-					matchResult.AddSpecialBlockSpawn(spawnCandidatePos, matchedFormation.GetSpecialBlock());
-					spawnedSpecialBlock = true;
-				}
-			}
-			if (!spawnedSpecialBlock) {
-				matchResult.AddSpecialBlockSpawn(matchedLocation, matchedFormation.GetSpecialBlock());
-			}
-		}
+
+		RemoveBlocksAt(matchedPositions);
+		matchResult.AddMatchedPositions(matchedPositions);
+		if (matchedFormation.NeedSpecialBlockSpawn())
+			matchResult.AddSpecialBlockWith(
+				matchedFormation.GetSpecialBlock(),
+				matchedLocation,
+				matchedPositions, 
+				specialBlockSpawnCandidatePositions);
 	}
 	return matchResult;
+}
+
+void BlockMatrix::RemoveBlocksAt(const TSet<FIntPoint>& positions)
+{
+	for (const auto& position : positions) {
+		auto removedNum = blockMatrix.Remove(position);
+		if (removedNum != 1) {
+			UE_LOG(LogTemp, Error, TEXT("removed block does not exist or duplicated in block map."));
+		}
+	}
 }
 
 bool BlockMatrix::IsOutOfMatrix(FIntPoint point) const
@@ -128,4 +131,25 @@ TSet<FIntPoint> MatchResult::GetSpawnPositionsOf(Block block) const
 			ret.Add(spawnPosition);
 	}
 	return ret;
+}
+
+void MatchResult::AddMatchedPositions(const TSet<FIntPoint>& matchedPositions)
+{
+	for (const auto& matchedBlockPosition : matchedPositions) {
+		AddMatchedPosition(matchedBlockPosition);
+	}
+}
+
+void MatchResult::AddSpecialBlockWith(Block specialBlock, FIntPoint defaultSpawnPosition, const TSet<FIntPoint>& matchedPositions, const TSet<FIntPoint>& specialBlockSpawnCandidatePositions)
+{
+	bool spawnedSpecialBlock = false;
+	for (const auto& spawnCandidatePos : specialBlockSpawnCandidatePositions) {
+		if (matchedPositions.Contains(spawnCandidatePos)) {
+			AddSpecialBlockSpawn(spawnCandidatePos, specialBlock);
+			spawnedSpecialBlock = true;
+		}
+	}
+	if (!spawnedSpecialBlock) {
+		AddSpecialBlockSpawn(defaultSpawnPosition, specialBlock);
+	}
 }
