@@ -326,15 +326,26 @@ bool TestUtils::AllBlocksAreFilledAsExpected(const BlockMatrix& blockMatrix)
 	return true;
 }
 
-bool TestUtils::IsExpectedBlockSpawnedAt(const BlockMatrix& blockMatrix, FIntPoint expectedSpawnPos, Block expectedBlockType)
+bool TestUtils::IsExpectedBlockExistsAt(const BlockMatrix& blockMatrix, FIntPoint positionToInspect, Block expectedBlockType)
 {
-	const auto actualBlockType = blockMatrix.At(expectedSpawnPos.X, expectedSpawnPos.Y);
+	const auto actualBlockType = blockMatrix.At(positionToInspect.X, positionToInspect.Y);
 	if (actualBlockType != expectedBlockType) {
-		UE_LOG(LogTemp, Error, TEXT("expected: %s but was %s at (%d, %d)"), *PrettyPrint(expectedBlockType), *PrettyPrint(actualBlockType), expectedSpawnPos.X, expectedSpawnPos.Y);
+		UE_LOG(LogTemp, Error, TEXT("expected: %s but was %s at (%d, %d)"), *PrettyPrint(expectedBlockType), *PrettyPrint(actualBlockType), positionToInspect.X, positionToInspect.Y);
 		return false;
 	}
 	return true;
 }
+
+bool TestUtils::IsNotExpectedBlockNotExistAt(const BlockMatrix& blockMatrix, FIntPoint positionToInspect, Block notExpectedBlockType)
+{
+	const auto actualBlockType = blockMatrix.At(positionToInspect.X, positionToInspect.Y);
+	if (actualBlockType == notExpectedBlockType) {
+		UE_LOG(LogTemp, Error, TEXT("Not expected: %s but was %s at (%d, %d)"), *PrettyPrint(notExpectedBlockType), *PrettyPrint(actualBlockType), positionToInspect.X, positionToInspect.Y);
+		return false;
+	}
+	return true;
+}
+
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(MultipleNewBlocksShouldBeGenerated, "Board.OnSwipe.Multiple new blocks should be generated if needed", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
 bool MultipleNewBlocksShouldBeGenerated::RunTest(const FString& Parameters) {
@@ -392,13 +403,13 @@ bool MunchickenShouldBeGenerated::RunTest(const FString& Parameters) {
 	// After destroy animation end
 	blockPhysics.Tick(blockPhysics.DESTROY_ANIMATION_TIME + TestUtils::veryShortTime);
 	const auto expectedMunchickenSpawnPosition = FIntPoint{ 1, 2 };
-	if (!TestUtils::IsExpectedBlockSpawnedAt(blockPhysics.GetBlockMatrix(), expectedMunchickenSpawnPosition, Block::MUNCHICKEN))
+	if (!TestUtils::IsExpectedBlockExistsAt(blockPhysics.GetBlockMatrix(), expectedMunchickenSpawnPosition, Block::MUNCHICKEN))
 		return false;
 	if (!TestUtils::AreNewBlocksSpawnedAsExpected(blockPhysics, 1, 2) || !TestUtils::AreNewBlocksSpawnedAsExpected(blockPhysics, 2, 1))
 		return false;
 	// After falling end
 	blockPhysics.Tick(TestUtils::GetFallTime(blockPhysics, 1) + TestUtils::veryShortTime);
-	if (!TestUtils::IsExpectedBlockSpawnedAt(blockPhysics.GetBlockMatrix(), FIntPoint{ 1,2 }, Block::MUNCHICKEN))
+	if (!TestUtils::IsExpectedBlockExistsAt(blockPhysics.GetBlockMatrix(), FIntPoint{ 1,2 }, Block::MUNCHICKEN))
 		return false;
 
 	return true;
@@ -418,7 +429,7 @@ bool MunchickenShouldBeGeneratedAtBlockInflowPosition::RunTest(const FString& Pa
 	// After destroy animation end
 	blockPhysics.Tick(blockPhysics.DESTROY_ANIMATION_TIME + TestUtils::veryShortTime);
 	const auto expectedMunchickenSpawnPosition = FIntPoint{ 1, 1 };
-	if (!TestUtils::IsExpectedBlockSpawnedAt(blockPhysics.GetBlockMatrix(), expectedMunchickenSpawnPosition, Block::MUNCHICKEN))
+	if (!TestUtils::IsExpectedBlockExistsAt(blockPhysics.GetBlockMatrix(), expectedMunchickenSpawnPosition, Block::MUNCHICKEN))
 		return false;
 
 	return true;
@@ -447,6 +458,30 @@ bool SwipeOnMunchickenShouldRollIt::RunTest(const FString& Parameters) {
 			return false;
 	}
 
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(SwipeOnMunchickenShouldRollItForFrequentTick, "Board.OnSwipe.Swipe on Munchicken should roll it for frequent tick", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool SwipeOnMunchickenShouldRollItForFrequentTick::RunTest(const FString& Parameters) {
+	// Setup
+	const auto swipeStart = FIntPoint{ 2, 2 };
+	const auto swipeEnd = FIntPoint{ 2, 1 };
+	const auto swipeDirectionVec = FIntPoint{ 0, -1 };
+	auto blockMatrix = TestUtils::munchickenRollTest;
+	auto counter = 0;
+	const auto newBlockGenerator = [&counter]() -> int {
+		return counter++;
+	};
+	auto blockPhysics = BlockPhysics(blockMatrix, newBlockGenerator);
+	// Swipe
+	blockPhysics.RecieveSwipeInput(swipeStart, swipeEnd);
+	// After time to pass one cell with frequent tick
+	auto divisor = 100;
+	for (int i = 0; i < divisor; i++)
+		blockPhysics.Tick(blockPhysics.GRID_SIZE / (blockPhysics.ROLL_SPEED * divisor));
+	blockPhysics.Tick(TestUtils::veryShortTime);
+	if (!TestUtils::IsNotExpectedBlockNotExistAt(blockPhysics.GetBlockMatrix(), swipeEnd, Block::ONE))
+		return false;
 	return true;
 }
 

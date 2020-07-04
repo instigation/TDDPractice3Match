@@ -186,16 +186,19 @@ void BlockPhysics::SetFallingActionsAndGenerateNewBlocks()
 int BlockPhysics::NumOccupiedCellsInColumn(int colIndex) const
 {
 	auto count = 0;
+	auto munchickenCount = 0;
 	auto occupiedRowIndices = TSet<int>();
 	for (const auto& block : physicalBlocks) {
 		const auto isOccupyingPositionInThisColumn = FGenericPlatformMath::Abs(block.currentAction->GetOccupiedPosition().Y - colIndex) < DELTA_DISTANCE;
 		if (isOccupyingPositionInThisColumn) {
 			occupiedRowIndices.Add(ToInt(block.currentAction->GetOccupiedPosition().X));
 			count++;
+			if (block.block == Block::MUNCHICKEN)
+				munchickenCount++;
 		}
 	}
-	if (count != occupiedRowIndices.Num()) {
-		UE_LOG(LogTemp, Warning, TEXT("'count' and 'occupied row indices count' differ"));
+	if (count-munchickenCount > occupiedRowIndices.Num()) {
+		UE_LOG(LogTemp, Warning, TEXT("'count-munchickenCount' is bigger than 'occupied row indices count'. Something must be overlapping"));
 	}
 	return occupiedRowIndices.Num();
 }
@@ -597,7 +600,7 @@ ActionType MunchickenRollAction::GetType() const
 void MunchickenRollAction::UpdatePosition(float deltaSeconds)
 {
 	const auto rollDistance = BlockPhysics::ROLL_SPEED * deltaSeconds;
-	position += rollDirection * rollDistance;
+	position += FVector2D(rollDirection) * rollDistance;
 }
 
 TSet<FIntPoint> MunchickenRollAction::GetCellPositionsRolledOver() const

@@ -23,7 +23,8 @@ public:
 	static bool AreNewBlocksNotSpawnedAsExpected(const BlockPhysics& blockPhysics, int colToInspect);
 	static bool AreAlmostIdenticalAsExpected(const BlockMatrix& blockMatrix1, const BlockMatrix& blockMatrix2, const TArray<FIntPoint>& exceptionalPositions);
 	static bool AllBlocksAreFilledAsExpected(const BlockMatrix& blockMatrix);
-	static bool IsExpectedBlockSpawnedAt(const BlockMatrix& blockMatrix, FIntPoint expectedSpawnPos, Block expectedBlockType);
+	static bool IsExpectedBlockExistsAt(const BlockMatrix& blockMatrix, FIntPoint positionToInspect, Block expectedBlockType);
+	static bool IsNotExpectedBlockNotExistAt(const BlockMatrix& blockMatrix, FIntPoint positionToInspect, Block notExpectedBlockType);
 
 	static float GetFallTime(const BlockPhysics& blockPhysics, int howManyGridsToFall);
 };
