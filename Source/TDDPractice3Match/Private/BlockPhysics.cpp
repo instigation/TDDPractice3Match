@@ -170,7 +170,7 @@ void BlockPhysics::SetFallingActionsAndGenerateNewBlocks()
 			}
 			else {
 				auto& currentBlock = blocksInCol.PopLowest();
-				if (currentBlock.block == Block::MUNCHICKEN) {
+				if (currentBlock.currentAction->GetType() == ActionType::Roll) {
 					positionsInCol.PopUpTo(currentBlock.currentAction->GetPosition().X);
 					continue;
 				}

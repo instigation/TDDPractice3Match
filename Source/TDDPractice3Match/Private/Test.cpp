@@ -513,3 +513,32 @@ bool MunchickenVerticalRollShouldNotSpawnNewBlocks::RunTest(const FString& Param
 		return false;
 	return true;
 }
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(MunchickenShouldFallIfIdle, "Board.OnSwipe.Munchicken should fall if idle", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool MunchickenShouldFallIfIdle::RunTest(const FString& Parameters) {
+	// Setup
+	const auto swipeStart = FIntPoint{ 0, 0 };
+	const auto swipeEnd = FIntPoint{ 1, 0 };
+	const auto swipeDirectionVec = FIntPoint{ 1, 0 };
+	auto blockMatrix = BlockMatrix(TArray<TArray<Block>>{
+		{ Block::ONE, Block::MUNCHICKEN, Block::TWO },
+		{ Block::TWO, Block::ONE, Block::ONE }
+	});
+	auto counter = 0;
+	const auto newBlockGenerator = [&counter]() -> int {
+		return counter++;
+	};
+	auto blockPhysics = BlockPhysics(blockMatrix, newBlockGenerator);
+	// Swipe
+	blockPhysics.RecieveSwipeInput(swipeStart, swipeEnd);
+	// Swipe move end
+	blockPhysics.Tick(blockPhysics.GRID_SIZE / blockPhysics.SWIPE_MOVE_SPEED + TestUtils::veryShortTime);
+	// block destroy end
+	blockPhysics.Tick(blockPhysics.DESTROY_ANIMATION_TIME + TestUtils::veryShortTime);
+	// Fall
+	blockPhysics.Tick(TestUtils::GetFallTime(blockPhysics, 1) + TestUtils::veryShortTime);
+	const auto munchickenExpectedPosition = FIntPoint{ 1, 1 };
+	if (!TestUtils::IsExpectedBlockExistsAt(blockPhysics.GetBlockMatrix(), munchickenExpectedPosition, Block::MUNCHICKEN))
+		return false;
+	return true;
+}
