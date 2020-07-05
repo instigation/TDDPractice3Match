@@ -536,7 +536,7 @@ TUniquePtr<BlockAction> GetsDestroyedAndSpawnBlockAfterAction::GetNextAction(boo
 }
 
 MunchickenRollAction::MunchickenRollAction(FVector2D initialPos, FIntPoint rollDirection, BlockPhysics& blockPhysics)
-	: BlockAction(initialPos), rollDirection(rollDirection), blockPhysics(blockPhysics)
+	: BlockAction(initialPos), lastRolledOverPosition(BlockPhysics::ToFIntPoint(initialPos)), rollDirection(rollDirection), blockPhysics(blockPhysics)
 {
 	if (rollDirection.X == 0)
 		rollType = Horizontal;
@@ -553,6 +553,8 @@ void MunchickenRollAction::Tick(float deltaSeconds)
 	previousPosition = position;
 	UpdatePosition(deltaSeconds);
 	const auto cellPositionsRolledOver = GetCellPositionsRolledOver();
+	for (const auto& rolledOverPosition : cellPositionsRolledOver)
+		lastRolledOverPosition = rolledOverPosition;
 	DestroyBlocksInBackground(cellPositionsRolledOver);
 }
 

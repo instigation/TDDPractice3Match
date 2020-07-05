@@ -135,6 +135,7 @@ public:
 	bool ShouldCheckMatch() const override;
 	bool IsEligibleForMatching() const override;
 	TUniquePtr<BlockAction> GetNextAction(bool thereIsAMatch) const override;
+	virtual FVector2D GetOccupiedPosition() const { return lastRolledOverPosition; }
 	ActionType GetType() const override;
 
 private:
@@ -144,6 +145,7 @@ private:
 	void DestroyBlocksInBackground(const TSet<FIntPoint>& destroyPositions);
 	bool IsOutOfTheMap() const;
 	FVector2D previousPosition;
+	FIntPoint lastRolledOverPosition;
 	FIntPoint rollDirection;
 	BlockPhysics& blockPhysics;
 	enum RollType {
@@ -224,7 +226,7 @@ public:
 	constexpr static float DELTA_DISTANCE = 0.0001f;
 	constexpr static float GRID_SIZE = 1.0f;
 	constexpr static float GRAVITY_ACCELERATION = 10.0f;
-	constexpr static float SWIPE_MOVE_SPEED = 1.0f;
+	constexpr static float SWIPE_MOVE_SPEED = 2.0f;
 	constexpr static float ROLL_SPEED = SWIPE_MOVE_SPEED;
 	constexpr static float DESTROY_ANIMATION_TIME = 0.35f;
 
