@@ -252,7 +252,6 @@ private:
 	void StartDestroyingMatchedBlocksAccordingTo(const MatchResult& blockMatrix);
 	void SetSpecialBlocksSpawnAccordingTo(const MatchResult& blockMatrix);
 
-	int NumOccupiedCellsInColumn(int colIndex) const;
 	void MakeBlockFallToDestination(PhysicalBlock& blockStatus, FIntPoint destination);
 
 	static int ToInt(float value);

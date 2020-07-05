@@ -26,5 +26,15 @@ public:
 	static bool IsExpectedBlockExistsAt(const BlockMatrix& blockMatrix, FIntPoint positionToInspect, Block expectedBlockType);
 	static bool IsNotExpectedBlockNotExistAt(const BlockMatrix& blockMatrix, FIntPoint positionToInspect, Block notExpectedBlockType);
 
+	class FrequentTicker {
+	public:
+		FrequentTicker(BlockPhysics& blockPhysics, int tickDivider, float veryShortTimeToAdd);
+		bool TickFrequent(float deltaSeconds, const TFunction<bool(void)>& isExpectationMet = []() { return true; });
+	private:
+		BlockPhysics& blockPhysics;
+		int tickDivider;
+		float veryShortTimeToAdd;
+	};
+
 	static float GetFallTime(const BlockPhysics& blockPhysics, int howManyGridsToFall);
 };

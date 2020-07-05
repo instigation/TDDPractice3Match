@@ -22,11 +22,14 @@ AMyPlayerController::AMyPlayerController()
 	bEnableTouchEvents = true;
 	DefaultMouseCursor = EMouseCursor::Crosshairs;
 
+	const auto  newBlockGenerator = []() -> int {
+		return static_cast<int>(Block::TWO) - static_cast<int>(Block::ZERO);
+	};
 	blockPhysics = new BlockPhysics(BlockMatrix(TArray<TArray<Block>>{
 		{Block::TWO, Block::TWO, Block::THREE},
 		{ Block::ONE, Block::TWO, Block::THREE },
 		{ Block::TWO, Block::MUNCHICKEN, Block::ONE }
-	}));
+	}), newBlockGenerator);
 	blockPhysics->DisableTickDebugLog();
 }
 

@@ -93,6 +93,7 @@ bool OnSwipeMatchCheckShouldOccurTest(int tickDivider) {
 		}
 	};
 	auto blockPhysics = BlockPhysics(blockMatrix, newBlockGenerator);
+	auto frequentTicker = TestUtils::FrequentTicker(blockPhysics, tickDivider, TestUtils::veryShortTime);
 
 	// Swipe
 	blockPhysics.RecieveSwipeInput(swipeStart, swipeEnd);
@@ -346,7 +347,6 @@ bool TestUtils::IsNotExpectedBlockNotExistAt(const BlockMatrix& blockMatrix, FIn
 	return true;
 }
 
-
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(MultipleNewBlocksShouldBeGenerated, "Board.OnSwipe.Multiple new blocks should be generated if needed", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
 bool MultipleNewBlocksShouldBeGenerated::RunTest(const FString& Parameters) {
 	// Setup
@@ -476,10 +476,8 @@ bool SwipeOnMunchickenShouldRollItForFrequentTick::RunTest(const FString& Parame
 	// Swipe
 	blockPhysics.RecieveSwipeInput(swipeStart, swipeEnd);
 	// After time to pass one cell with frequent tick
-	auto divisor = 100;
-	for (int i = 0; i < divisor; i++)
-		blockPhysics.Tick(blockPhysics.GRID_SIZE / (blockPhysics.ROLL_SPEED * divisor));
-	blockPhysics.Tick(TestUtils::veryShortTime);
+	auto frequentTicker = TestUtils::FrequentTicker(blockPhysics, 100, TestUtils::veryShortTime);
+	frequentTicker.TickFrequent(blockPhysics.GRID_SIZE / blockPhysics.ROLL_SPEED);
 	if (!TestUtils::IsNotExpectedBlockNotExistAt(blockPhysics.GetBlockMatrix(), swipeEnd, Block::ONE))
 		return false;
 	return true;
@@ -501,14 +499,18 @@ bool MunchickenVerticalRollShouldNotSpawnNewBlocks::RunTest(const FString& Param
 	// Swipe
 	blockPhysics.RecieveSwipeInput(swipeStart, swipeEnd);
 	const auto numGridsToGo = 3;
+	auto frequentTicker = TestUtils::FrequentTicker(blockPhysics, 20, TestUtils::veryShortTime);
+	const auto areNewBlockNotSpawned = [&blockPhysics, movingColIndex]() -> bool {
+		return TestUtils::AreNewBlocksNotSpawnedAsExpected(blockPhysics, movingColIndex);
+	};
 	// for each cells this munchicken enter
 	for (int i = 0; i < numGridsToGo-1; i++) {
-		blockPhysics.Tick((blockPhysics.GRID_SIZE / blockPhysics.ROLL_SPEED) + TestUtils::veryShortTime);
-		if (!TestUtils::AreNewBlocksNotSpawnedAsExpected(blockPhysics, movingColIndex))
+		if(!frequentTicker.TickFrequent(blockPhysics.GRID_SIZE / blockPhysics.ROLL_SPEED, areNewBlockNotSpawned))
 			return false;
 	}
 	// when this munchicken gets destroyed
-	blockPhysics.Tick((blockPhysics.GRID_SIZE / blockPhysics.ROLL_SPEED) + TestUtils::veryShortTime);
+	frequentTicker.TickFrequent(blockPhysics.GRID_SIZE / blockPhysics.ROLL_SPEED);
+	frequentTicker.TickFrequent(blockPhysics.DESTROY_ANIMATION_TIME);
 	if (!TestUtils::AreNewBlocksSpawnedAsExpected(blockPhysics, movingColIndex, 3))
 		return false;
 	return true;
@@ -540,5 +542,22 @@ bool MunchickenShouldFallIfIdle::RunTest(const FString& Parameters) {
 	const auto munchickenExpectedPosition = FIntPoint{ 1, 1 };
 	if (!TestUtils::IsExpectedBlockExistsAt(blockPhysics.GetBlockMatrix(), munchickenExpectedPosition, Block::MUNCHICKEN))
 		return false;
+	return true;
+}
+
+TestUtils::FrequentTicker::FrequentTicker(BlockPhysics& blockPhysics, int tickDivider, float veryShortTimeToAdd)
+	: blockPhysics(blockPhysics), tickDivider(tickDivider), veryShortTimeToAdd(veryShortTimeToAdd)
+{
+
+}
+
+bool TestUtils::FrequentTicker::TickFrequent(float deltaSeconds, const TFunction<bool(void)>& isExpectationMet)
+{
+	for (int i = 0; i < tickDivider; i++) {
+		blockPhysics.Tick(deltaSeconds /tickDivider);
+		if (!isExpectationMet())
+			return false;
+	}
+	blockPhysics.Tick(veryShortTimeToAdd);
 	return true;
 }

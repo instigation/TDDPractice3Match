@@ -12,7 +12,7 @@ namespace MyMathUtils
     class TDDPRACTICE3MATCH_API Square {
     public:
         Square(FIntPoint leftLowerPoint, FIntPoint rightUpperPoint);
-        bool Includes(FIntPoint point) const;
+        bool Includes(FVector2D point) const;
     private:
         int leftX = INT_MIN;
         int rightX = INT_MAX;

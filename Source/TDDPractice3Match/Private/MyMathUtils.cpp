@@ -9,7 +9,7 @@ MyMathUtils::Square::Square(FIntPoint leftLowerPoint, FIntPoint rightUpperPoint)
 
 }
 
-bool MyMathUtils::Square::Includes(FIntPoint point) const
+bool MyMathUtils::Square::Includes(FVector2D point) const
 {
 	return (point.X >= leftX) && (point.X <= rightX) &&
 		(point.Y >= lowerY) && (point.Y <= upperY);
