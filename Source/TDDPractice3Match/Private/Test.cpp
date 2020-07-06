@@ -199,6 +199,15 @@ const BlockMatrix TestUtils::munchickenRollTest = BlockMatrix{
 	}
 };
 
+const BlockMatrix TestUtils::oneByFourMatchTest = BlockMatrix{
+	TArray<TArray<Block>>{
+		{Block::ZERO, Block::ONE, Block::ZERO, Block::ZERO},
+		{Block::ONE, Block::ZERO, Block::TWO, Block::TWO},
+		{Block::TWO, Block::ONE, Block::ZERO, Block::TWO},
+		{Block::TWO, Block::TWO, Block::ZERO, Block::FOUR}
+	}
+};
+
 bool TestUtils::IsCorrectlyGettingDestroyed(const BlockPhysics& blockPhysics, const TArray<FIntPoint>& onlyPositionsThatShouldBeDestroyed)
 {
 	const auto numRows = blockPhysics.GetNumRows();
@@ -560,4 +569,29 @@ bool TestUtils::FrequentTicker::TickFrequent(float deltaSeconds, const TFunction
 	}
 	blockPhysics.Tick(veryShortTimeToAdd);
 	return true;
+}
+
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(OneByFourMatchShouldSpawnLineClearBlock, "Board.MatchRule.One by Four match should spawn line clear block", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool OneByFourMatchShouldSpawnLineClearBlock::RunTest(const FString& Parameters) {
+	// Setup
+	const auto swipeStart = FIntPoint{ 1, 1 };
+	const auto swipeEnd = FIntPoint{ 0, 1 };
+	const auto swipeDirectionVec = FIntPoint{ -1, 0 };
+	auto counter = 0;
+	const auto newBlockGenerator = [&counter]() -> int {
+		return counter++;
+	};
+	auto blockPhysics = BlockPhysics(TestUtils::oneByFourMatchTest, newBlockGenerator);
+	// Swipe
+	blockPhysics.RecieveSwipeInput(swipeStart, swipeEnd);
+	// Swipe move end
+	blockPhysics.Tick(blockPhysics.GRID_SIZE / blockPhysics.SWIPE_MOVE_SPEED + TestUtils::veryShortTime);
+	// block destroy end
+	blockPhysics.Tick(blockPhysics.DESTROY_ANIMATION_TIME + TestUtils::veryShortTime);
+	const auto lineClearBlockExpectedPosition = FIntPoint{ 0, 1 };
+	if (!TestUtils::IsExpectedBlockExistsAt(blockPhysics.GetBlockMatrix(), lineClearBlockExpectedPosition, Block::VERTICAL_LINE_CLEAR))
+		return false;
+	return true;
+
 }

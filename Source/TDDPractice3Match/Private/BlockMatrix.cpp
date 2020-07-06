@@ -31,7 +31,7 @@ BlockMatrix::BlockMatrix(int numRows, int numCols, const TMap<FIntPoint, Block> 
 
 bool BlockMatrix::HasNoMatch() const
 {
-	const auto matchedFormations = GetMatchedLocationAndFormations();
+	const auto matchedFormations = GetMatches();
 	return matchedFormations.Num() == 0;
 }
 
@@ -44,15 +44,11 @@ Block BlockMatrix::At(int row, int col) const
 MatchResult BlockMatrix::ProcessMatch(const TSet<FIntPoint>& specialBlockSpawnCandidatePositions)
 {
 	auto matchResult = MatchResult();
-	const auto matchedLocationAndFormations = GetMatchedLocationAndFormations();
-	for (const auto& locationAndFormation : matchedLocationAndFormations) {
-		const auto matchedLocation = locationAndFormation.Key;
-		const auto matchedFormation = locationAndFormation.Value;
-		auto matchedPositions = TSet<FIntPoint>();
-		for (const auto& vector : matchedFormation.vectors) {
-			matchedPositions.Add(matchedLocation + vector);
-		}
-
+	const auto matches = GetMatches();
+	for (const auto& match : matches) {
+		const auto matchedLocation = match.GetLocation();
+		const auto matchedFormation = match.GetFormation();
+		const auto matchedPositions = match.GetMatchedPositions();
 		RemoveBlocksAt(matchedPositions);
 		matchResult.AddMatchedPositions(matchedPositions);
 		if (matchedFormation.NeedSpecialBlockSpawn())
@@ -70,7 +66,7 @@ void BlockMatrix::RemoveBlocksAt(const TSet<FIntPoint>& positions)
 	for (const auto& position : positions) {
 		auto removedNum = blockMatrix.Remove(position);
 		if (removedNum != 1) {
-			UE_LOG(LogTemp, Error, TEXT("removed block does not exist or duplicated in block map."));
+			UE_LOG(LogTemp, Error, TEXT("removed block does not exist or duplicated in block map: position (%d, %d)"), position.X, position.Y);
 		}
 	}
 }
@@ -82,55 +78,62 @@ bool BlockMatrix::IsOutOfMatrix(FIntPoint point) const
 		(block2DArray[point.X][point.Y] == Block::INVALID);
 }
 
-TArray<TPair<FIntPoint, Formation>> BlockMatrix::GetMatchedLocationAndFormations() const
+TSet<Match> BlockMatrix::GetMatches() const
 {
-	auto ret = TArray<TPair<FIntPoint, Formation>>();
+	auto ret = TSet<Match>();
 
 	for (int i = 0; i < numRows; i++) {
 		for (int j = 0; j < numCols; j++) {
 			const auto point = FIntPoint{ i, j };
-			for (const auto& rule : MatchRules::rules) {
-				for (const auto& formation : rule) {
-					auto isFormationOutOfMatrix = false;
-					for (const auto& vector : formation.vectors) {
-						if (IsOutOfMatrix(point + vector)) {
-							isFormationOutOfMatrix = true;
-							break;
-						}
-					}
-
-					if (!isFormationOutOfMatrix) {
-						auto colors = TSet<BlockColor>();
-						for (const auto& vector : formation.vectors) {
-							if (!blockMatrix.Contains(point + vector)) {
-								UE_LOG(LogTemp, Warning, TEXT("IsOutOfMatrix를 통과했는데 blockMatrix에 값이 없음"));
-								colors.Empty();
-								break;
-							}
-							colors.Add(GetColor(blockMatrix.FindRef(point + vector)));
-						}
-						if (colors.Num() == 1) {
-							ret.Add(TPair<FIntPoint, Formation>{point, formation});
-						}
-					}
-				}
-			}
+			const auto matchAtHereInArray = FindAMatchAt(point);
+			if (matchAtHereInArray.Num() == 0)
+				continue;
+			const auto matchAtHere = matchAtHereInArray.Last();
+			AddAndRemoveSubcompatibles(ret, matchAtHere);
 		}
 	}
 
 	return ret;
 }
 
-TSet<FIntPoint> MatchResult::GetSpawnPositionsOf(Block block) const
+TArray<Match> BlockMatrix::FindAMatchAt(FIntPoint point) const
 {
-	auto ret = TSet<FIntPoint>();
-	for (const auto& spawnPositionAndBlock : specialBlockSpawnPositions) {
-		const auto spawnPosition = spawnPositionAndBlock.Key;
-		const auto specialBlockToSpawn = spawnPositionAndBlock.Value;
-		if (specialBlockToSpawn == block)
-			ret.Add(spawnPosition);
+	auto ret = TArray<Match>();
+	for (const auto& rule : MatchRules::rules) {
+		for (const auto& formation : rule) {
+			if (IsFormationOutOfMatrix(formation, point))
+				continue;
+			if (ColorOfBlocksConsistentIn(formation, point)) {
+				ret.Add(Match(point, formation));
+				return ret;
+			}
+		}
 	}
 	return ret;
+}
+
+bool BlockMatrix::IsFormationOutOfMatrix(const Formation& formation, FIntPoint point) const
+{
+	for (const auto& vector : formation.vectors) {
+		if (IsOutOfMatrix(point + vector)) {
+			return true;
+		}
+	}
+	return false;
+}
+
+bool BlockMatrix::ColorOfBlocksConsistentIn(const Formation& formation, FIntPoint point) const
+{
+	auto colors = TSet<BlockColor>();
+	for (const auto& vector : formation.vectors) {
+		if (!blockMatrix.Contains(point + vector)) {
+			UE_LOG(LogTemp, Warning, TEXT("IsOutOfMatrix를 통과했는데 blockMatrix에 값이 없음"));
+			colors.Empty();
+			break;
+		}
+		colors.Add(GetColor(blockMatrix.FindRef(point + vector)));
+	}
+	return (colors.Num() == 1);
 }
 
 void MatchResult::AddMatchedPositions(const TSet<FIntPoint>& matchedPositions)
@@ -152,4 +155,56 @@ void MatchResult::AddSpecialBlockWith(Block specialBlock, FIntPoint defaultSpawn
 	if (!spawnedSpecialBlock) {
 		AddSpecialBlockSpawn(defaultSpawnPosition, specialBlock);
 	}
+}
+
+bool Match::IsSubcompatibleOf(const TSet<Match>& matches) const
+{
+	for (const auto& match : matches) {
+		if (IsSubcompatibleOf(match))
+			return true;
+	}
+	return false;
+}
+
+bool Match::IsSubcompatibleOf(const Match& otherMatch) const
+{
+	for (const auto& matchedPosition : GetMatchedPositions()) {
+		if (!otherMatch.GetMatchedPositions().Contains(matchedPosition))
+			return false;
+	}
+	return true;
+}
+
+TSet<FIntPoint> Match::GetMatchedPositions() const
+{
+	auto matchedPositions = TSet<FIntPoint>();
+	for (const auto& vector : formation.vectors) {
+		matchedPositions.Add(location + vector);
+	}
+	return matchedPositions;
+}
+
+bool Match::operator==(const Match& otherMatch) const
+{
+	return (location == otherMatch.location) && (formation == otherMatch.formation);
+}
+
+void AddAndRemoveSubcompatibles(TSet<Match>& originalSet, const Match& newElement)
+{
+	if (newElement.IsSubcompatibleOf(originalSet))
+		return;
+
+	auto subcompatiblesInOriginalSet = TSet<Match>();
+	for (const auto& originalElement : originalSet) {
+		if (originalElement.IsSubcompatibleOf(newElement)) {
+			subcompatiblesInOriginalSet.Add(originalElement);
+		}
+	}
+	originalSet = originalSet.Difference(subcompatiblesInOriginalSet);
+	originalSet.Add(newElement);
+}
+
+uint32 GetTypeHash(const Match& match)
+{
+	return GetTypeHash(match.GetFormation()) + GetTypeHash(match.GetLocation());
 }

@@ -359,16 +359,16 @@ void BlockPhysics::StartDestroyingMatchedBlocksAccordingTo(const MatchResult& ma
 
 void BlockPhysics::SetSpecialBlocksSpawnAccordingTo(const MatchResult& matchResult)
 {
-	for (const auto& munchickenSpawnPosition : matchResult.GetSpawnPositionsOf(Block::MUNCHICKEN)) {
-		const auto row = munchickenSpawnPosition.X;
-		const auto col = munchickenSpawnPosition.Y;
-		auto* physicalBlock = GetTopmostBlockAt(munchickenSpawnPosition);
+	for (const auto& specialBlockAndItsSpawnPosition : matchResult.GetSpecialBlockAndItsSpawnPositions()) {
+		const auto specialBlock = specialBlockAndItsSpawnPosition.Key;
+		const auto spawnPosition = specialBlockAndItsSpawnPosition.Value;
+		auto* physicalBlock = GetTopmostBlockAt(spawnPosition);
 		if (physicalBlock == nullptr) {
-			UE_LOG(LogTemp, Warning, TEXT("physicalBlock to update does not exist at (%d, %d)"), row, col);
+			UE_LOG(LogTemp, Warning, TEXT("physicalBlock to update does not exist at (%d, %d)"), spawnPosition.X, spawnPosition.Y);
 			continue;
 		}
-		UE_LOG(LogTemp, Display, TEXT("Special physicalBlock generation reserved at (%d, %d)"), row, col);
-		physicalBlock->currentAction = MakeUnique<GetsDestroyedAndSpawnBlockAfterAction>(FVector2D(munchickenSpawnPosition), Block::MUNCHICKEN);
+		UE_LOG(LogTemp, Display, TEXT("Special physicalBlock generation reserved at (%d, %d)"), spawnPosition.X, spawnPosition.Y);
+		physicalBlock->currentAction = MakeUnique<GetsDestroyedAndSpawnBlockAfterAction>(FVector2D(spawnPosition), specialBlock);
 	}
 }
 

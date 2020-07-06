@@ -25,8 +25,8 @@ AMyPlayerController::AMyPlayerController()
 	blockPhysics = new BlockPhysics(BlockMatrix(TArray<TArray<Block>>{
 		{Block::TWO, Block::TWO, Block::THREE, Block::ZERO},
 		{ Block::ONE, Block::TWO, Block::THREE, Block::ZERO },
-		{ Block::TWO, Block::MUNCHICKEN, Block::ONE, Block::TWO },
-		{ Block::FOUR, Block::ZERO, Block::TWO, Block::TWO }
+		{ Block::TWO, Block::MUNCHICKEN, Block::ONE, Block::THREE },
+		{ Block::FOUR, Block::ZERO, Block::THREE, Block::TWO }
 	}));
 	blockPhysics->DisableTickDebugLog();
 }

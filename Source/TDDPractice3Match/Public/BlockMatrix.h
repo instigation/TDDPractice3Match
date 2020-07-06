@@ -7,18 +7,35 @@
 #include "MatchRules.h"
 
 
+class Match {
+public:
+	Match(FIntPoint location, Formation formation) : location(location), formation(formation) {}
+	Match(const Match& other) = default;
+	bool IsSubcompatibleOf(const TSet<Match>& matches) const;
+	bool IsSubcompatibleOf(const Match& otherMatch) const;
+	TSet<FIntPoint> GetMatchedPositions() const;
+	FIntPoint GetLocation() const { return location; }
+	Formation GetFormation() const { return formation; }
+	bool operator==(const Match& otherMatch) const;
+private:
+	FIntPoint location;
+	Formation formation;
+};
+void AddAndRemoveSubcompatibles(TSet<Match>& matches, const Match& matchToAdd);
+uint32 GetTypeHash(const Match& match);
+
 class TDDPRACTICE3MATCH_API MatchResult {
 public:
 	TSet<FIntPoint> GetMatchedPositions() const { return allMatchedPositions; }
-	TSet<FIntPoint> GetSpawnPositionsOf(Block block) const;
+	TSet<TPair<Block, FIntPoint>> GetSpecialBlockAndItsSpawnPositions() const { return specialBlockSpawnPositions; }
 	void AddMatchedPositions(const TSet<FIntPoint>& matchedPositions);
 	void AddSpecialBlockWith(Block specialBlock, FIntPoint defaultSpawnPosition, const TSet<FIntPoint>& matchedPositions, const TSet<FIntPoint>& specialBlockSpawnCandidatePositions);
 private:
 	void AddMatchedPosition(FIntPoint matchedPosition) { allMatchedPositions.Add(matchedPosition); }
-	void AddSpecialBlockSpawn(FIntPoint spawnPosition, Block specialBlockType) { specialBlockSpawnPositions.Add(TPair<FIntPoint, Block>{spawnPosition, specialBlockType}); }
+	void AddSpecialBlockSpawn(FIntPoint spawnPosition, Block specialBlockType) { specialBlockSpawnPositions.Add(TPair<Block, FIntPoint>{specialBlockType, spawnPosition}); }
 
 	TSet<FIntPoint> allMatchedPositions;
-	TSet<TPair<FIntPoint, Block>> specialBlockSpawnPositions;
+	TSet<TPair<Block, FIntPoint>> specialBlockSpawnPositions;
 };
 
 class TDDPRACTICE3MATCH_API BlockMatrix {
@@ -37,7 +54,10 @@ private:
 	static int GetRow(FIntPoint point) { return point.X; }
 	static int GetCol(FIntPoint point) { return point.Y; }
 	bool IsOutOfMatrix(FIntPoint point) const;
-	TArray<TPair<FIntPoint, Formation>> GetMatchedLocationAndFormations() const;
+	TSet<Match> GetMatches() const;
+	TArray<Match> FindAMatchAt(FIntPoint point) const;
+	bool IsFormationOutOfMatrix(const Formation& formation, FIntPoint point) const;
+	bool ColorOfBlocksConsistentIn(const Formation& formation, FIntPoint point) const;
 	int numRows = 0;
 	int numCols = 0;
 	TMap<FIntPoint, Block> blockMatrix;
