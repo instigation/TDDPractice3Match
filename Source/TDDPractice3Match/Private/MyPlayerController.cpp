@@ -190,9 +190,9 @@ UClass* AMyPlayerController::GetBlockActorClassToSpawn(const PhysicalBlockSnapSh
 {
 	if (physicalBlockSnapShot.actionType == ActionType::GetsDestroyed)
 		return explosionActorBlutprintType.Get();
-	if (IsSpecial(physicalBlockSnapShot.block))
-		return specialBlockActorBlueprintType[static_cast<int>(physicalBlockSnapShot.block) - static_cast<int>(Block::MAX_NORMAL) - 1].Get();
-	return blockActorBlueprintType[static_cast<int>(physicalBlockSnapShot.block)].Get();
+	if (physicalBlockSnapShot.block.IsSpecial())
+		return specialBlockActorBlueprintType[0].Get();
+	return blockActorBlueprintType[static_cast<int>(physicalBlockSnapShot.block.GetColor())].Get();
 }
 
 void AMyPlayerController::UpdateBlockStatus(AActor* pBlockActor, const PhysicalBlockSnapShot& physicalBlockSnapShot)

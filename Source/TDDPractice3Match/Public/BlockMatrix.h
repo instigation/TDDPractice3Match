@@ -9,17 +9,19 @@
 
 class Match {
 public:
-	Match(FIntPoint location, Formation formation) : location(location), formation(formation) {}
+	Match(FIntPoint location, Formation formation, BlockColor color) : location(location), formation(formation), matchedColor(color) {}
 	Match(const Match& other) = default;
 	bool IsSubcompatibleOf(const TSet<Match>& matches) const;
 	bool IsSubcompatibleOf(const Match& otherMatch) const;
 	TSet<FIntPoint> GetMatchedPositions() const;
+	BlockColor GetMatchedColor() const { return matchedColor; }
 	FIntPoint GetLocation() const { return location; }
 	Formation GetFormation() const { return formation; }
 	bool operator==(const Match& otherMatch) const;
 private:
 	FIntPoint location;
 	Formation formation;
+	BlockColor matchedColor;
 };
 void AddAndRemoveSubcompatibles(TSet<Match>& matches, const Match& matchToAdd);
 uint32 GetTypeHash(const Match& match);
@@ -32,7 +34,7 @@ public:
 	void AddSpecialBlockWith(Block specialBlock, FIntPoint defaultSpawnPosition, const TSet<FIntPoint>& matchedPositions, const TSet<FIntPoint>& specialBlockSpawnCandidatePositions);
 private:
 	void AddMatchedPosition(FIntPoint matchedPosition) { allMatchedPositions.Add(matchedPosition); }
-	void AddSpecialBlockSpawn(FIntPoint spawnPosition, Block specialBlockType) { specialBlockSpawnPositions.Add(TPair<Block, FIntPoint>{specialBlockType, spawnPosition}); }
+	void AddSpecialBlockSpawn(FIntPoint spawnPosition, Block specialBlock) { specialBlockSpawnPositions.Add(TPair<Block, FIntPoint>{specialBlock, spawnPosition}); }
 
 	TSet<FIntPoint> allMatchedPositions;
 	TSet<TPair<Block, FIntPoint>> specialBlockSpawnPositions;

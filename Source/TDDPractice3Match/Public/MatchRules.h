@@ -4,12 +4,12 @@
 #include "Block.h"
 
 struct TDDPRACTICE3MATCH_API Formation {
-	Formation(const TArray<FIntPoint>& vectors, Block specialBlock = Block::INVALID) : vectors(vectors), specialBlock(specialBlock) {};
+	Formation(const TArray<FIntPoint>& vectors, BlockSpecialAttribute specialBlock = BlockSpecialAttribute::NONE) : vectors(vectors), specialBlock(specialBlock) {};
 	bool NeedSpecialBlockSpawn() const { return vectors.Num() == 4; };
-	Block GetSpecialBlock() const { return specialBlock; };
+	BlockSpecialAttribute GetBlockSpecialAttribute() const { return specialBlock; };
 	bool operator==(const Formation& other) const;
 	TArray<FIntPoint> vectors;
-	Block specialBlock;
+	BlockSpecialAttribute specialBlock;
 };
 
 uint32 GetTypeHash(const Formation& formation);
@@ -31,13 +31,13 @@ __declspec(selectany) const TArray<Formation> MatchRules::threeBlockLineFormatio
 
 __declspec(selectany) const TArray<Formation> MatchRules::fourBlockSquareFormations =
 {
-	Formation({{-1,-1}, {-1,0}, {0,-1}, {0,0}}, Block::MUNCHICKEN)
+	Formation({{-1,-1}, {-1,0}, {0,-1}, {0,0}}, BlockSpecialAttribute::ROLLABLE)
 };
 
 __declspec(selectany) const TArray<Formation> MatchRules::fourBlockLineFormations =
 {
-	Formation({{1,0}, {0,0}, {-1,0}, {-2,0}}, Block::HORIZONTAL_LINE_CLEAR),
-	Formation({{0,1}, {0,0}, {0,-1}, {0,-2}}, Block::VERTICAL_LINE_CLEAR)
+	Formation({{1,0}, {0,0}, {-1,0}, {-2,0}}, BlockSpecialAttribute::HORIZONTAL_LINE_CLEAR),
+	Formation({{0,1}, {0,0}, {0,-1}, {0,-2}}, BlockSpecialAttribute::VERTICAL_LINE_CLEAR)
 };
 
 __declspec(selectany) const TArray<TArray<Formation>> MatchRules::rules =

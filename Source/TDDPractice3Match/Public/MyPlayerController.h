@@ -9,7 +9,7 @@
 class BlockPhysics;
 class PhysicalBlockSnapShot;
 class AActor;
-enum class Block;
+class Block;
 enum class ActionType;
 
 /**

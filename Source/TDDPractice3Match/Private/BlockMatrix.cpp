@@ -49,11 +49,13 @@ MatchResult BlockMatrix::ProcessMatch(const TSet<FIntPoint>& specialBlockSpawnCa
 		const auto matchedLocation = match.GetLocation();
 		const auto matchedFormation = match.GetFormation();
 		const auto matchedPositions = match.GetMatchedPositions();
+		const auto matchedColor = match.GetMatchedColor();
+		const auto specialBlockColor = HasColor(matchedFormation.GetBlockSpecialAttribute()) ? matchedColor : BlockColor::NONE;
 		RemoveBlocksAt(matchedPositions);
 		matchResult.AddMatchedPositions(matchedPositions);
 		if (matchedFormation.NeedSpecialBlockSpawn())
 			matchResult.AddSpecialBlockWith(
-				matchedFormation.GetSpecialBlock(),
+				Block(specialBlockColor, matchedFormation.GetBlockSpecialAttribute()),
 				matchedLocation,
 				matchedPositions, 
 				specialBlockSpawnCandidatePositions);
@@ -104,7 +106,8 @@ TArray<Match> BlockMatrix::FindAMatchAt(FIntPoint point) const
 			if (IsFormationOutOfMatrix(formation, point))
 				continue;
 			if (ColorOfBlocksConsistentIn(formation, point)) {
-				ret.Add(Match(point, formation));
+				const auto color = At(point.X, point.Y).GetColor();
+				ret.Add(Match(point, formation, color));
 				return ret;
 			}
 		}
@@ -131,7 +134,7 @@ bool BlockMatrix::ColorOfBlocksConsistentIn(const Formation& formation, FIntPoin
 			colors.Empty();
 			break;
 		}
-		colors.Add(GetColor(blockMatrix.FindRef(point + vector)));
+		colors.Add(blockMatrix.FindRef(point + vector).GetColor());
 	}
 	return (colors.Num() == 1);
 }

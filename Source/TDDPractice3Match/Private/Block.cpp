@@ -1,28 +1,55 @@
 #include "../Public/Block.h"
 
+
+uint32 GetTypeHash(const Block& block)
+{
+	return (1 + static_cast<int>(block.GetColor())) * (1 + static_cast<int>(block.GetSpecialAttribute()));
+}
+
 FString PrettyPrint(Block block)
 {
-	if (block == Block::MUNCHICKEN)
-		return TEXT("MUNCHICKEN");
-	else if (block == Block::INVALID)
-		return TEXT("INVALID");
-	else
-		return FString::FromInt(static_cast<int>(block) - static_cast<int>(Block::MIN));
+	return PrettyPrint(block.GetColor()) + FString(TEXT("-")) + PrettyPrint(block.GetSpecialAttribute());
+}
+
+FString PrettyPrint(BlockColor color)
+{
+	return blockColorEnumStrings[static_cast<int>(color)];
+}
+
+FString PrettyPrint(BlockSpecialAttribute specialAttribute)
+{
+	return blockSpecialAttributeEnumStrings[static_cast<int>(specialAttribute)];
 }
 
 TArray<Block> GetNormalBlocks() {
 	auto ret = TArray<Block>();
-	for (int i = static_cast<int>(Block::MIN) + 1; i < static_cast<int>(Block::MAX_NORMAL); i++)
-		ret.Add(Block(i));
+	for (const auto validColor : validColors) {
+		ret.Add(Block(validColor, BlockSpecialAttribute::NONE));
+	}
 	return ret;
 }
 
-bool IsSpecial(Block block)
+bool Block::operator==(const Block& otherBlock) const
 {
-	return (block > Block::MAX_NORMAL) && (block < Block::MAX_SPECIAL);
+	return (color == otherBlock.color) && (specialAttribute == otherBlock.specialAttribute);
 }
 
-BlockColor GetColor(Block block)
+const Block Block::INVALID = Block(BlockColor::NONE, BlockSpecialAttribute::NONE);
+
+const Block Block::ZERO = Block(BlockColor::ZERO, BlockSpecialAttribute::NONE);
+
+const Block Block::ONE = Block(BlockColor::ONE, BlockSpecialAttribute::NONE);
+
+const Block Block::TWO = Block(BlockColor::TWO, BlockSpecialAttribute::NONE);
+
+const Block Block::THREE = Block(BlockColor::THREE, BlockSpecialAttribute::NONE);
+
+const Block Block::FOUR = Block(BlockColor::FOUR, BlockSpecialAttribute::NONE);
+
+const Block Block::MUNCHICKEN = Block(BlockColor::NONE, BlockSpecialAttribute::ROLLABLE);
+
+bool HasColor(BlockSpecialAttribute specialAttribute)
 {
-	return BlockColor(static_cast<int>(block));
+	return (specialAttribute != BlockSpecialAttribute::ROLLABLE) &&
+		(specialAttribute != BlockSpecialAttribute::ONE_COLOR_CLEAR);
 }
