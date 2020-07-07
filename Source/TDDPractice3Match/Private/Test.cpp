@@ -153,7 +153,7 @@ bool OnSwipeMatchCheckShouldOccur::RunTest(const FString& Parameters)
 	return OnSwipeMatchCheckShouldOccurTest(1);
 }
 
-IMPLEMENT_SIMPLE_AUTOMATION_TEST(TickFrequencyShouldNotMatter, "Board.OnSwipe.Should work fine even if Tick is frequent", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(TickFrequencyShouldNotMatter, "Board.OnSwipe.Match should occur even if Tick is frequent", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
 bool TickFrequencyShouldNotMatter::RunTest(const FString& Parameters) {
 	if (!OnSwipeMatchCheckShouldOccurTest(10))
 		return false;
@@ -356,7 +356,7 @@ bool TestUtils::IsNotExpectedBlockNotExistAt(const BlockMatrix& blockMatrix, FIn
 	return true;
 }
 
-IMPLEMENT_SIMPLE_AUTOMATION_TEST(MultipleNewBlocksShouldBeGenerated, "Board.OnSwipe.Multiple new blocks should be generated if needed", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(MultipleNewBlocksShouldBeGenerated, "Board.BlockSpawn.Multiple new blocks should be generated if needed", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
 bool MultipleNewBlocksShouldBeGenerated::RunTest(const FString& Parameters) {
 	// Setup
 	const auto swipeColumn = 2;
@@ -393,7 +393,7 @@ bool MultipleNewBlocksShouldBeGenerated::RunTest(const FString& Parameters) {
 	return true;
 }
 
-IMPLEMENT_SIMPLE_AUTOMATION_TEST(MunchickenShouldBeGenerated, "Board.OnSwipe.Munchicken should be generated if 2x2 matched", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(MunchickenShouldBeGenerated, "Board.MatchRule.Rollable should be generated if 2x2 matched", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
 bool MunchickenShouldBeGenerated::RunTest(const FString& Parameters) {
 	// Setup
 	const auto swipeStart = FIntPoint{ 1, 3 };
@@ -424,7 +424,7 @@ bool MunchickenShouldBeGenerated::RunTest(const FString& Parameters) {
 	return true;
 }
 
-IMPLEMENT_SIMPLE_AUTOMATION_TEST(MunchickenShouldBeGeneratedAtBlockInflowPosition, "Board.OnSwipe.Munchicken should be generated at block inflow position", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(MunchickenShouldBeGeneratedAtBlockInflowPosition, "Board.Rollable.Rollable should be generated at block inflow position", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
 bool MunchickenShouldBeGeneratedAtBlockInflowPosition::RunTest(const FString& Parameters) {
 	// Setup
 	const auto swipeStart = FIntPoint{ 1, 0 };
@@ -444,7 +444,7 @@ bool MunchickenShouldBeGeneratedAtBlockInflowPosition::RunTest(const FString& Pa
 	return true;
 }
 
-IMPLEMENT_SIMPLE_AUTOMATION_TEST(SwipeOnMunchickenShouldRollIt, "Board.OnSwipe.Swipe on Munchicken should roll it", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(SwipeOnMunchickenShouldRollIt, "Board.Rollable.Swipe on Rollable should roll it", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
 bool SwipeOnMunchickenShouldRollIt::RunTest(const FString& Parameters) {
 	// Setup
 	const auto swipeStart = FIntPoint{ 2, 2 };
@@ -470,7 +470,7 @@ bool SwipeOnMunchickenShouldRollIt::RunTest(const FString& Parameters) {
 	return true;
 }
 
-IMPLEMENT_SIMPLE_AUTOMATION_TEST(SwipeOnMunchickenShouldRollItForFrequentTick, "Board.OnSwipe.Swipe on Munchicken should roll it for frequent tick", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(SwipeOnMunchickenShouldRollItForFrequentTick, "Board.Rollable.Swipe on Rollable should roll it for frequent tick", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
 bool SwipeOnMunchickenShouldRollItForFrequentTick::RunTest(const FString& Parameters) {
 	// Setup
 	const auto swipeStart = FIntPoint{ 2, 2 };
@@ -492,7 +492,7 @@ bool SwipeOnMunchickenShouldRollItForFrequentTick::RunTest(const FString& Parame
 	return true;
 }
 
-IMPLEMENT_SIMPLE_AUTOMATION_TEST(MunchickenVerticalRollShouldNotSpawnNewBlocks, "Board.OnSwipe.Munchicken vertical roll should not spawn new blocks", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(MunchickenVerticalRollShouldNotSpawnNewBlocks, "Board.Rollable.Rollable vertical roll should not spawn new blocks", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
 bool MunchickenVerticalRollShouldNotSpawnNewBlocks::RunTest(const FString& Parameters) {
 	// Setup
 	const auto swipeStart = FIntPoint{ 2, 2 };
@@ -525,7 +525,7 @@ bool MunchickenVerticalRollShouldNotSpawnNewBlocks::RunTest(const FString& Param
 	return true;
 }
 
-IMPLEMENT_SIMPLE_AUTOMATION_TEST(MunchickenShouldFallIfIdle, "Board.OnSwipe.Munchicken should fall if idle", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(MunchickenShouldFallIfIdle, "Board.Rollable.Rollable should fall if idle", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
 bool MunchickenShouldFallIfIdle::RunTest(const FString& Parameters) {
 	// Setup
 	const auto swipeStart = FIntPoint{ 0, 0 };
