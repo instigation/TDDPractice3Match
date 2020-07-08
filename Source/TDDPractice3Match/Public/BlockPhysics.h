@@ -16,6 +16,7 @@ public:
 	FVector2D position;
 };
 
+class ExplosionArea;
 
 class PhysicalBlock {
 public:
@@ -25,6 +26,7 @@ public:
 	PhysicalBlock(PhysicalBlock&& other);
 	int GetId() const { return id; }
 	PhysicalBlockSnapShot GetSnapShot() const;
+	TUniquePtr<ExplosionArea> GetExplosionArea(float gridSize) const { return block.GetExplosionArea(currentAction->GetPosition(), gridSize); }
 	Block block;
 	TUniquePtr<BlockAction> currentAction;
 private:
@@ -32,11 +34,18 @@ private:
 	static int lastIssuedId;
 };
 
+class PhysicalBlocksSnapShotDiff {
+public:
+	PhysicalBlocksSnapShotDiff(const TArray<PhysicalBlockSnapShot>& before, const TArray<PhysicalBlockSnapShot>& after);
+	TSet<int> GetJustDestroyedBlockIds() const;
+private:
+	bool WasNotDestroyingBefore(int blockId) const;
+	TArray<PhysicalBlockSnapShot> before;
+	TArray<PhysicalBlockSnapShot> after;
+};
+
 class BlockMatrix;
 
-/**
- *
- */
 class TDDPRACTICE3MATCH_API BlockPhysics
 {
 public:
@@ -52,6 +61,8 @@ private:
 	bool ShouldCheckMatch();
 	bool CheckAndProcessMatch();
 	TSet<FIntPoint> GetBlockInflowPositions();
+	void RecursivelyApplyExplosionEffects(const TSet<int>& destroyedBlockIds);
+	TSet<int> DestroyBlocksAndGetTheirIds(const ExplosionArea& explosionArea);
 	void RemoveDeadBlocks();
 	void ChangeCompletedActionsToNextActions(bool thereIsAMatch);
 	void SetFallingActionsAndGenerateNewBlocks();

@@ -26,6 +26,7 @@ void FTDDPractice3MatchModuleImpl::ShutdownModule() {
 	FAutomationTestFramework::Get().UnregisterAutomationTest(TEXT("MunchickenVerticalRollShouldNotSpawnNewBlocks"));
 	FAutomationTestFramework::Get().UnregisterAutomationTest(TEXT("MunchickenShouldFallIfIdle"));
 	FAutomationTestFramework::Get().UnregisterAutomationTest(TEXT("OneByFourMatchShouldSpawnLineClearBlock"));
+	FAutomationTestFramework::Get().UnregisterAutomationTest(TEXT("LineClearerShouldClearALineOnDestroy"));
 	
 	UE_LOG(LogTemp, Warning, TEXT("ShoutdownModule"));
 }

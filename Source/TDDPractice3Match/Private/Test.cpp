@@ -208,6 +208,14 @@ const BlockMatrix TestUtils::oneByFourMatchTest = BlockMatrix{
 	}
 };
 
+const BlockMatrix TestUtils::lineClearerTest = BlockMatrix{
+	TArray<TArray<Block>>{
+		{Block::ONE, Block::TWO, Block(BlockColor::ONE, BlockSpecialAttribute::VERTICAL_LINE_CLEAR)},
+		{Block::THREE, Block::ONE, Block::THREE},
+		{Block::FOUR, Block::ZERO, Block::ONE}
+	}
+};
+
 bool TestUtils::IsCorrectlyGettingDestroyed(const BlockPhysics& blockPhysics, const TArray<FIntPoint>& onlyPositionsThatShouldBeDestroyed)
 {
 	const auto numRows = blockPhysics.GetNumRows();
@@ -595,4 +603,30 @@ bool OneByFourMatchShouldSpawnLineClearBlock::RunTest(const FString& Parameters)
 		return false;
 	return true;
 
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(LineClearerShouldClearALineOnDestroy, "Board.LineClearer.Line clearer should clear a line on destory", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool LineClearerShouldClearALineOnDestroy::RunTest(const FString& Parameters) {
+	// Setup
+	const auto swipeStart = FIntPoint{ 1, 1 };
+	const auto swipeEnd = FIntPoint{ 0, 1 };
+	const auto swipeDirectionVec = FIntPoint{ -1, 0 };
+	auto counter = 0;
+	const auto newBlockGenerator = [&counter]() -> int {
+		return counter++;
+	};
+	auto blockPhysics = BlockPhysics(TestUtils::lineClearerTest, newBlockGenerator);
+	// Swipe
+	blockPhysics.RecieveSwipeInput(swipeStart, swipeEnd);
+	// Swipe move end
+	blockPhysics.Tick(blockPhysics.GRID_SIZE / blockPhysics.SWIPE_MOVE_SPEED + TestUtils::veryShortTime);
+	// block destroy end
+	blockPhysics.Tick(blockPhysics.DESTROY_ANIMATION_TIME + TestUtils::veryShortTime);
+	// expect all blocks in column 2 destroyed
+	const auto blockDestroyExpectedPositions = TArray<FIntPoint>{
+		{0,0}, {0,1}, {0,2}, {1,2}, {2,2}
+	};
+	if (!TestUtils::IsCorrectlyEmpty(blockPhysics, blockDestroyExpectedPositions))
+		return false;
+	return true;
 }

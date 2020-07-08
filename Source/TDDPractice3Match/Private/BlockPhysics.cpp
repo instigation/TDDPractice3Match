@@ -31,11 +31,16 @@ void BlockPhysics::Tick(float deltaSeconds)
 	elapsedTime += deltaSeconds;
 	if(enableTickDebugLog)
 		UE_LOG(LogTemp, Display, TEXT("Tick start. Elapsed time: %f"), elapsedTime);
+	const auto snapshotsBeforeTick = GetPhysicalBlockSnapShots();
 	TickBlockActions(deltaSeconds);
 	auto thereIsAMatch = false;
 	if (ShouldCheckMatch()) {
 		thereIsAMatch = CheckAndProcessMatch();
 	}
+	const auto snapshotsAfterTick = GetPhysicalBlockSnapShots();
+	const auto snapshotDiff = PhysicalBlocksSnapShotDiff(snapshotsBeforeTick, snapshotsAfterTick);
+	const auto blockIdsDestroyedInThisTick = snapshotDiff.GetJustDestroyedBlockIds();
+	RecursivelyApplyExplosionEffects(blockIdsDestroyedInThisTick);
 	RemoveDeadBlocks();
 	ChangeCompletedActionsToNextActions(thereIsAMatch);
 	SetFallingActionsAndGenerateNewBlocks();
@@ -84,6 +89,35 @@ TSet<FIntPoint> BlockPhysics::GetBlockInflowPositions()
 	for (const auto& block : physicalBlocks) {
 		if (block.currentAction->IsJustCompleted() && IsNearLatticePoint(block.currentAction->GetPosition())) {
 			ret.Add(ToFIntPoint(block.currentAction->GetPosition()));
+		}
+	}
+	return ret;
+}
+
+void BlockPhysics::RecursivelyApplyExplosionEffects(const TSet<int>& destroyedBlockIds)
+{
+	if (destroyedBlockIds.Num() == 0)
+		return;
+
+	auto newlyDestroyedBlockIds = TSet<int>();
+	for (const auto& physicalBlock : physicalBlocks) {
+		if (destroyedBlockIds.Contains(physicalBlock.GetId())) {
+			const auto explosionArea = physicalBlock.GetExplosionArea(GRID_SIZE);
+			newlyDestroyedBlockIds.Append(DestroyBlocksAndGetTheirIds(*explosionArea));
+		}
+	}
+	RecursivelyApplyExplosionEffects(newlyDestroyedBlockIds);
+}
+
+TSet<int> BlockPhysics::DestroyBlocksAndGetTheirIds(const ExplosionArea& explosionArea)
+{
+	auto ret = TSet<int>();
+	for (auto& physicalBlock : physicalBlocks) {
+		const auto blockPosition = physicalBlock.currentAction->GetPosition();
+		if ((explosionArea.Contains(blockPosition)) &&
+			(physicalBlock.currentAction->GetType() != ActionType::GetsDestroyed)) {
+			ret.Add(physicalBlock.GetId());
+			physicalBlock.currentAction = MakeUnique<GetsDestroyedBlockAction>(blockPosition);
 		}
 	}
 	return ret;
@@ -423,3 +457,28 @@ PhysicalBlockSnapShot PhysicalBlock::GetSnapShot() const
 
 int PhysicalBlock::lastIssuedId = -1;
 
+PhysicalBlocksSnapShotDiff::PhysicalBlocksSnapShotDiff(const TArray<PhysicalBlockSnapShot>& before, const TArray<PhysicalBlockSnapShot>& after)
+	: before(before), after(after)
+{
+
+}
+
+TSet<int> PhysicalBlocksSnapShotDiff::GetJustDestroyedBlockIds() const
+{
+	auto ret = TSet<int>();
+	for (const auto& afterBlockSnapshot : after) {
+		const auto isDestroyingNow = afterBlockSnapshot.actionType == ActionType::GetsDestroyed;
+		if (isDestroyingNow && WasNotDestroyingBefore(afterBlockSnapshot.id))
+			ret.Add(afterBlockSnapshot.id);
+	}
+	return ret;
+}
+
+bool PhysicalBlocksSnapShotDiff::WasNotDestroyingBefore(int blockId) const
+{
+	for (const auto& beforeBlockSnapshot : before) {
+		if (beforeBlockSnapshot.id == blockId)
+			return beforeBlockSnapshot.actionType != ActionType::GetsDestroyed;
+	}
+	return true;
+}

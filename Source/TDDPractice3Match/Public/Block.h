@@ -33,6 +33,26 @@ const static TArray<FString> blockSpecialAttributeEnumStrings = TArray<FString>{
 };
 bool HasColor(BlockSpecialAttribute specialAttribute);
 
+class ExplosionArea {
+public:
+    virtual ~ExplosionArea() {}
+	virtual bool Contains(const FVector2D& position) const = 0;
+};
+
+class VerticalLineExplosionArea : public ExplosionArea {
+public:
+    VerticalLineExplosionArea(const FVector2D& centerPosition, float gridSize)
+        : minY(centerPosition.Y - gridSize / 2), maxY(centerPosition.Y + gridSize / 2) {}
+    virtual bool Contains(const FVector2D& position) const override { return (minY <= position.Y) && (position.Y <= maxY); }
+private:
+    float minY;
+    float maxY;
+};
+
+class EmptyExplosionArea : public ExplosionArea {
+public:
+    virtual bool Contains(const FVector2D& position) const override { return false; }
+};
 
 class TDDPRACTICE3MATCH_API Block {
 public:
@@ -40,7 +60,13 @@ public:
     Block(BlockColor color, BlockSpecialAttribute specialAttribute) : color(color), specialAttribute(specialAttribute) {}
     BlockColor GetColor() const { return color; }
     BlockSpecialAttribute GetSpecialAttribute() const { return specialAttribute; }
-    bool IsSpecial() const { return specialAttribute != BlockSpecialAttribute::NONE; }
+	bool IsSpecial() const { return specialAttribute != BlockSpecialAttribute::NONE; }
+    TUniquePtr<ExplosionArea> GetExplosionArea(const FVector2D& blockPosition, float gridSize) const {
+        if (specialAttribute == BlockSpecialAttribute::VERTICAL_LINE_CLEAR)
+            return MakeUnique<VerticalLineExplosionArea>(blockPosition, gridSize);
+        else
+            return MakeUnique<EmptyExplosionArea>();
+    }
 
     bool operator==(const Block& otherBlock) const;
     bool operator!=(const Block& otherBlock) const { return !(*this == otherBlock); }

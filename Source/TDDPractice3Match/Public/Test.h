@@ -16,6 +16,7 @@ public:
 	static const BlockMatrix twoByTwoMatchTest2;
 	static const BlockMatrix munchickenRollTest;
 	static const BlockMatrix oneByFourMatchTest;
+	static const BlockMatrix lineClearerTest;
 
 	static bool IsCorrectlyGettingDestroyed(const BlockPhysics& blockPhysics, const TArray<FIntPoint>& onlyPositionsThatShouldBeDestroyed);
 	static bool IsCorrectlyEmpty(const BlockPhysics& blockPhysics, const TArray<FIntPoint>& onlyPositionsThatShouldBeEmpty);
