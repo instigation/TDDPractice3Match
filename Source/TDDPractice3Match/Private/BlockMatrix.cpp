@@ -153,6 +153,7 @@ void MatchResult::AddSpecialBlockWith(Block specialBlock, FIntPoint defaultSpawn
 		if (matchedPositions.Contains(spawnCandidatePos)) {
 			AddSpecialBlockSpawn(spawnCandidatePos, specialBlock);
 			spawnedSpecialBlock = true;
+			return;
 		}
 	}
 	if (!spawnedSpecialBlock) {

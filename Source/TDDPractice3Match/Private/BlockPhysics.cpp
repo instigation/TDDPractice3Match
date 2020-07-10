@@ -401,7 +401,7 @@ void BlockPhysics::SetSpecialBlocksSpawnAccordingTo(const MatchResult& matchResu
 			UE_LOG(LogTemp, Warning, TEXT("physicalBlock to update does not exist at (%d, %d)"), spawnPosition.X, spawnPosition.Y);
 			continue;
 		}
-		UE_LOG(LogTemp, Display, TEXT("Special physicalBlock generation reserved at (%d, %d)"), spawnPosition.X, spawnPosition.Y);
+		UE_LOG(LogTemp, Display, TEXT("Special physicalBlock %s generation reserved at (%d, %d)"), *PrettyPrint(specialBlock), spawnPosition.X, spawnPosition.Y);
 		physicalBlock->currentAction = MakeUnique<GetsDestroyedAndSpawnBlockAfterAction>(FVector2D(spawnPosition), specialBlock);
 	}
 }
