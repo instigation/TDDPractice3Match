@@ -34,7 +34,7 @@ bool Block::operator==(const Block& otherBlock) const
 	return (color == otherBlock.color) && (specialAttribute == otherBlock.specialAttribute);
 }
 
-const Block Block::INVALID = Block(BlockColor::NONE, BlockSpecialAttribute::NONE);
+const Block Block::INVALID = Block(BlockColor::INVALID, BlockSpecialAttribute::INVALID);
 
 const Block Block::ZERO = Block(BlockColor::ZERO, BlockSpecialAttribute::NONE);
 

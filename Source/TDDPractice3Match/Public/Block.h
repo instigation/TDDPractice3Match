@@ -9,7 +9,8 @@ enum class TDDPRACTICE3MATCH_API BlockColor {
     TWO,
     THREE,
     FOUR,
-    NONE
+    NONE,
+    INVALID
 };
 const static TArray<FString> blockColorEnumStrings = TArray<FString>{
 	TEXT("ZERO"), TEXT("ONE"), TEXT("TWO"), TEXT("THREE"), TEXT("FOUR"), TEXT("NONE")
@@ -25,7 +26,8 @@ enum class TDDPRACTICE3MATCH_API BlockSpecialAttribute {
     VERTICAL_LINE_CLEAR,
     HORIZONTAL_LINE_CLEAR,
 	DIAMOND_NEIGHBORHOOD_CLEAR,
-	NONE
+	NONE,
+    INVALID
 };
 const static TArray<FString> blockSpecialAttributeEnumStrings = TArray<FString>{
 	TEXT("ROLLABLE"), TEXT("ONE_COLOR_CLEAR"), TEXT("VERTICAL_LINE_CLEAR"), TEXT("HORIZONTAL_LINE_CLEAR"),
