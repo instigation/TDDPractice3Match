@@ -12,8 +12,9 @@ enum class TDDPRACTICE3MATCH_API BlockColor {
     NONE,
     INVALID
 };
+
 const static TArray<FString> blockColorEnumStrings = TArray<FString>{
-	TEXT("ZERO"), TEXT("ONE"), TEXT("TWO"), TEXT("THREE"), TEXT("FOUR"), TEXT("NONE")
+	TEXT("ZERO"), TEXT("ONE"), TEXT("TWO"), TEXT("THREE"), TEXT("FOUR"), TEXT("NONE"), TEXT("INVALID")
 };
 const static TArray<BlockColor> validColors = TArray<BlockColor>{
 	BlockColor::ZERO, BlockColor::ONE, BlockColor::TWO, BlockColor::THREE, BlockColor::FOUR
@@ -31,7 +32,7 @@ enum class TDDPRACTICE3MATCH_API BlockSpecialAttribute {
 };
 const static TArray<FString> blockSpecialAttributeEnumStrings = TArray<FString>{
 	TEXT("ROLLABLE"), TEXT("ONE_COLOR_CLEAR"), TEXT("VERTICAL_LINE_CLEAR"), TEXT("HORIZONTAL_LINE_CLEAR"),
-	TEXT("DIAMOND_NEIGHBORHOOD_CLEAR"), TEXT("NONE")
+	TEXT("DIAMOND_NEIGHBORHOOD_CLEAR"), TEXT("NONE"), TEXT("INVALID")
 };
 bool HasColor(BlockSpecialAttribute specialAttribute);
 

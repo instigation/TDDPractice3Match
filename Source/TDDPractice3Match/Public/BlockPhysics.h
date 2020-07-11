@@ -49,7 +49,7 @@ class BlockMatrix;
 class TDDPRACTICE3MATCH_API BlockPhysics
 {
 public:
-	BlockPhysics(const BlockMatrix& blockMatrix, TFunction<int(void)> newBlockGenerator = rand);
+	explicit BlockPhysics(const BlockMatrix& blockMatrix, TFunction<int(void)> newBlockGenerator = rand);
 	BlockPhysics(const BlockPhysics& other) = delete;
 	BlockPhysics(BlockPhysics&& other);
 	~BlockPhysics();

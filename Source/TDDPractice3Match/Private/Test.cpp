@@ -608,6 +608,27 @@ bool OneByFourMatchShouldSpawnLineClearBlock::RunTest(const FString& Parameters)
 	return TestUtils::ExpectedBlockExistsAt(blockPhysics.GetBlockMatrix(), lineClearBlockExpectedPosition, expectedLineClearBlock);
 }
 
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(FourByOneMatchShouldSpawnLineClearBlock, "Board.MatchRule.Line clearer should be generated if 4x1 matched", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool FourByOneMatchShouldSpawnLineClearBlock::RunTest(const FString& Parameters) {
+	// Setup
+	const auto swipeStart = FIntPoint{ 1, 1 };
+	const auto swipeEnd = FIntPoint{ 1, 2 };
+	const auto swipeDirectionVec = FIntPoint{ 0, 1 };
+	auto counter = 0;
+	const auto newBlockGenerator = [&counter]() -> int {
+		return counter++;
+	};
+	auto blockPhysics = BlockPhysics(TestUtils::oneByFourMatchTest, newBlockGenerator);
+	// Swipe
+	blockPhysics.RecieveSwipeInput(swipeStart, swipeEnd);
+	// Swipe move end
+	blockPhysics.Tick(blockPhysics.GRID_SIZE / blockPhysics.SWIPE_MOVE_SPEED + TestUtils::veryShortTime);
+	// block destroy end
+	blockPhysics.Tick(blockPhysics.DESTROY_ANIMATION_TIME + TestUtils::veryShortTime);
+	const auto expectedLineClearBlock = Block(BlockColor::ZERO, BlockSpecialAttribute::HORIZONTAL_LINE_CLEAR);
+	return TestUtils::SpecificBlockOccursAsExpected(blockPhysics, expectedLineClearBlock, 1);
+}
+
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(LineClearerShouldClearALineOnDestroy, "Board.LineClearer.Line clearer should clear a line on destory", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
 bool LineClearerShouldClearALineOnDestroy::RunTest(const FString& Parameters) {
 	// Setup

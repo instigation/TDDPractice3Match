@@ -13,12 +13,24 @@ FString PrettyPrint(Block block)
 
 FString PrettyPrint(BlockColor color)
 {
-	return blockColorEnumStrings[static_cast<int>(color)];
+	const auto index = static_cast<int>(color);
+	if (index >= blockColorEnumStrings.Num()) {
+		UE_LOG(LogTemp, Error, TEXT("Should add enum string for color %d"), index);
+		return TEXT("Undefined");
+	}
+
+	return blockColorEnumStrings[index];
 }
 
 FString PrettyPrint(BlockSpecialAttribute specialAttribute)
 {
-	return blockSpecialAttributeEnumStrings[static_cast<int>(specialAttribute)];
+	const auto index = static_cast<int>(specialAttribute);
+	if (index >= blockSpecialAttributeEnumStrings.Num()) {
+		UE_LOG(LogTemp, Error, TEXT("Should add enum string for specialAttribute %d"), index);
+		return TEXT("Undefined");
+	}
+
+	return blockSpecialAttributeEnumStrings[index];
 }
 
 TArray<Block> GetNormalBlocks() {
