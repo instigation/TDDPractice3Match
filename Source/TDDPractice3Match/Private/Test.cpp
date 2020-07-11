@@ -212,7 +212,7 @@ const BlockMatrix TestUtils::lineClearerTest = BlockMatrix{
 	TArray<TArray<Block>>{
 		{Block::ONE, Block::TWO, Block(BlockColor::ONE, BlockSpecialAttribute::VERTICAL_LINE_CLEAR)},
 		{Block::THREE, Block::ONE, Block::THREE},
-		{Block::FOUR, Block::ZERO, Block::ONE}
+		{Block::FOUR, Block::ZERO, Block(BlockColor::TWO, BlockSpecialAttribute::HORIZONTAL_LINE_CLEAR)}
 	}
 };
 
@@ -648,7 +648,7 @@ bool LineClearerShouldClearALineOnDestroy::RunTest(const FString& Parameters) {
 	blockPhysics.Tick(blockPhysics.DESTROY_ANIMATION_TIME + TestUtils::veryShortTime);
 	// expect all blocks in column 2 destroyed
 	const auto blockDestroyExpectedPositions = TArray<FIntPoint>{
-		{0,0}, {0,1}, {0,2}, {1,2}, {2,2}
+		{0,0}, {0,1}, {0,2}, {1,2}, {2,2}, {2,1}, {2,0}
 	};
 	return TestUtils::IsCorrectlyEmpty(blockPhysics, blockDestroyExpectedPositions);
 }
