@@ -219,11 +219,11 @@ void BlockPhysics::SetFallingActionsAndGenerateNewBlocks()
 	}
 }
 
-void BlockPhysics::RecieveSwipeInput(FIntPoint swipeStart, FIntPoint swipeEnd)
+void BlockPhysics::ReceiveSwipeInput(FIntPoint swipeStart, FIntPoint swipeEnd)
 {
 	auto startBlock = GetTopmostBlockAt(swipeStart);
 	if (startBlock == nullptr) {
-		UE_LOG(LogTemp, Warning, TEXT("RecieveSwipeInput precondition: block should exist at start position: (%d, %d)"),
+		UE_LOG(LogTemp, Warning, TEXT("ReceiveSwipeInput precondition: block should exist at start position: (%d, %d)"),
 			swipeStart.X, swipeStart.Y);
 		return;
 	}
@@ -231,7 +231,7 @@ void BlockPhysics::RecieveSwipeInput(FIntPoint swipeStart, FIntPoint swipeEnd)
 	if (startBlock->block != Block::MUNCHICKEN) {
 		auto endBlock = GetTopmostBlockAt(swipeEnd);
 		if (endBlock == nullptr) {
-			UE_LOG(LogTemp, Warning, TEXT("RecieveSwipeInput precondition: block should exist at end position if swiping block is not munchicken: (%d, %d)"),
+			UE_LOG(LogTemp, Warning, TEXT("ReceiveSwipeInput precondition: block should exist at end position if swiping block is not munchicken: (%d, %d)"),
 				swipeEnd.X, swipeEnd.Y);
 			return;
 		}

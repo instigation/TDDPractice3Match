@@ -68,7 +68,7 @@ private:
 	void SetFallingActionsAndGenerateNewBlocks();
 
 public:
-	void RecieveSwipeInput(FIntPoint swipeStart, FIntPoint swipeEnd);
+	void ReceiveSwipeInput(FIntPoint swipeStart, FIntPoint swipeEnd);
 
 	void DisableTickDebugLog() { enableTickDebugLog = false; }
 	bool enableTickDebugLog = true;

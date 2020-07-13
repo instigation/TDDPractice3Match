@@ -12,7 +12,7 @@ BlockPhysicsTester::BlockPhysicsTester(const BlockMatrix& initialBlockMatrix, TF
 
 void BlockPhysicsTester::DoSwipe(const FIntPoint& swipeStart, const FIntPoint& swipeEnd) const
 {
-	blockPhysics->RecieveSwipeInput(swipeStart, swipeEnd);
+	blockPhysics->ReceiveSwipeInput(swipeStart, swipeEnd);
 }
 
 void BlockPhysicsTester::TickUntilSwipeMoveAnimationEnd()

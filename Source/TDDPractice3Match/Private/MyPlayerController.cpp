@@ -85,7 +85,7 @@ void AMyPlayerController::ProcessSwipeInput(bool debug)
 		return;
 	const auto normalizedDragDirection = NormalizeAsHorizontalOrVertical(dragDirection);
 	const auto normalizedDragEndCellCoordinate = dragStartCellCoordinate + normalizedDragDirection;
-	blockPhysics->RecieveSwipeInput(dragStartCellCoordinate, normalizedDragEndCellCoordinate);
+	blockPhysics->ReceiveSwipeInput(dragStartCellCoordinate, normalizedDragEndCellCoordinate);
 
 	if (debug) {
 		UE_LOG(LogTemp, Display, TEXT("dragStart: (%d, %d), dragEnd: (%d, %d)"),
