@@ -43,6 +43,6 @@ __declspec(selectany) const TArray<Formation> MatchRules::fourBlockLineFormation
 __declspec(selectany) const TArray<TArray<Formation>> MatchRules::rules =
 {
 	fourBlockLineFormations,
-	threeBlockLineFormations,
-	fourBlockSquareFormations
+	fourBlockSquareFormations,
+	threeBlockLineFormations
 };
