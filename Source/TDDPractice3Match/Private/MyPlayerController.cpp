@@ -11,6 +11,7 @@
 #include "BlockMatrix.h"
 #include "BlockActor.h"
 #include "Block.h"
+#include "PaperSpriteComponent.h"
 
 
 AMyPlayerController::AMyPlayerController() 
@@ -24,9 +25,9 @@ AMyPlayerController::AMyPlayerController()
 
 	blockPhysics = new BlockPhysics(BlockMatrix(TArray<TArray<Block>>{
 		{Block::TWO, Block::TWO, Block::THREE, Block::ZERO},
-		{ Block::ONE, Block::TWO, Block::THREE, Block::ZERO },
-		{ Block::TWO, Block::MUNCHICKEN, Block::ONE, Block::THREE },
-		{ Block::FOUR, Block::ZERO, Block::THREE, Block::TWO }
+		{ Block::ONE, Block::TWO, Block::THREE, Block::ONE },
+		{ Block::TWO, Block::MUNCHICKEN, Block::ZERO, Block::THREE },
+		{ Block::ZERO, Block::ZERO, Block::THREE, Block::ZERO }
 	}));
 	blockPhysics->DisableTickDebugLog();
 }
@@ -176,23 +177,62 @@ void AMyPlayerController::SpawnInitialBlocks()
 
 void AMyPlayerController::SpawnBlockActor(const PhysicalBlockSnapShot& physicalBlockSnapShot)
 {
-	auto world = GetWorld();
-	if (world == nullptr)
-		return;
 	auto spawnPosition = CellCoordinaeToWorldPosition(physicalBlockSnapShot.position);
 	auto spawnRotation = FRotator::ZeroRotator;
-	auto spawnResult = world->SpawnActor(GetBlockActorClassToSpawn(physicalBlockSnapShot), &spawnPosition, &spawnRotation);
+	auto spawnResult = SpawnBlockActor(physicalBlockSnapShot, &spawnPosition, &spawnRotation);
+	if (spawnResult == nullptr)
+		return;
 	idToBlockActorMap.Add(physicalBlockSnapShot.id, spawnResult);
 	idToActionTypeMap.Add(physicalBlockSnapShot.id, physicalBlockSnapShot.actionType);
 }
 
-UClass* AMyPlayerController::GetBlockActorClassToSpawn(const PhysicalBlockSnapShot& physicalBlockSnapShot)
+AActor* AMyPlayerController::SpawnBlockActor(const PhysicalBlockSnapShot& physicalBlockSnapShot, const FVector* spawnPosition, const FRotator* spawnRotation)
 {
-	if (physicalBlockSnapShot.actionType == ActionType::GetsDestroyed)
-		return explosionActorBlutprintType.Get();
-	if (physicalBlockSnapShot.block.IsSpecial())
-		return specialBlockActorBlueprintType[0].Get();
-	return blockActorBlueprintType[static_cast<int>(physicalBlockSnapShot.block.GetColor())].Get();
+	auto world = GetWorld();
+	if (world == nullptr)
+		return nullptr;
+
+	FVector yAdjustedSpawnPosition = *spawnPosition + FVector(0, physicalBlockSnapShot.id, 0);
+	if (physicalBlockSnapShot.block.GetSpecialAttribute() == BlockSpecialAttribute::ROLLABLE)
+		yAdjustedSpawnPosition += FVector(0, 200, 0);
+	const auto actionType = physicalBlockSnapShot.actionType;
+	const auto block = physicalBlockSnapShot.block;
+	if (actionType == ActionType::GetsDestroyed) {
+		return world->SpawnActor(
+			explosionActorBlutprintType.Get(),
+			&yAdjustedSpawnPosition,
+			spawnRotation);
+	}
+	else if (block.HasDecoratorAttribute()) {
+		auto ret = world->SpawnActor(
+			blockActorBlueprintType[static_cast<int>(block.GetColor())].Get(),
+			&yAdjustedSpawnPosition,
+			spawnRotation);
+		auto additionalComponent = NewObject<UPaperSpriteComponent>(ret, TEXT("blah"));
+		additionalComponent->SetSimulatePhysics(false);
+		additionalComponent->SetRelativeLocation(FVector(0, 0.5, 0));
+		additionalComponent->RegisterComponent();
+		additionalComponent->SetSprite(horizontalRibbonSprite);
+		additionalComponent->SetRelativeScale3D(FVector(0.5, 1, 0.5));
+		if (block.GetSpecialAttribute() == BlockSpecialAttribute::VERTICAL_LINE_CLEAR)
+			additionalComponent->SetRelativeRotation(FRotator(90, 0, 0));
+		const auto attachResult = additionalComponent->AttachToComponent(ret->GetRootComponent(), FAttachmentTransformRules::KeepRelativeTransform);
+		if (!attachResult)
+			UE_LOG(LogTemp, Error, TEXT("Decorator attach fail"));
+		return ret;
+	}
+	else if (block.IsSpecial()) {
+		return world->SpawnActor(
+			specialBlockActorBlueprintType[0].Get(),
+			&yAdjustedSpawnPosition,
+			spawnRotation);
+	}
+	else {
+		return world->SpawnActor(
+			blockActorBlueprintType[static_cast<int>(block.GetColor())].Get(),
+			&yAdjustedSpawnPosition,
+			spawnRotation);
+	}
 }
 
 void AMyPlayerController::UpdateBlockStatus(AActor* pBlockActor, const PhysicalBlockSnapShot& physicalBlockSnapShot)

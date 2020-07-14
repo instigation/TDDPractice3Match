@@ -36,6 +36,10 @@ const static TArray<FString> blockSpecialAttributeEnumStrings = TArray<FString>{
 	TEXT("DIAMOND_NEIGHBORHOOD_CLEAR"), TEXT("NONE"), TEXT("INVALID")
 };
 bool HasColor(BlockSpecialAttribute specialAttribute);
+const static TArray<BlockSpecialAttribute> decoratorAttributes = TArray<BlockSpecialAttribute>{
+    BlockSpecialAttribute::VERTICAL_LINE_CLEAR, BlockSpecialAttribute::HORIZONTAL_LINE_CLEAR,
+    BlockSpecialAttribute::DIAMOND_NEIGHBORHOOD_CLEAR
+};
 
 
 class TDDPRACTICE3MATCH_API Block {
@@ -45,6 +49,7 @@ public:
     BlockColor GetColor() const { return color; }
     BlockSpecialAttribute GetSpecialAttribute() const { return specialAttribute; }
 	bool IsSpecial() const { return specialAttribute != BlockSpecialAttribute::NONE; }
+	bool HasDecoratorAttribute() const { return decoratorAttributes.Contains(specialAttribute);	}
     TUniquePtr<ExplosionArea> GetExplosionArea(const FVector2D& blockPosition, float gridSize) const {
         if (specialAttribute == BlockSpecialAttribute::VERTICAL_LINE_CLEAR)
             return MakeUnique<VerticalLineExplosionArea>(blockPosition, gridSize);

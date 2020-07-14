@@ -11,6 +11,7 @@ class PhysicalBlockSnapShot;
 class AActor;
 class Block;
 enum class ActionType;
+class UPaperSprite;
 
 /**
  * 
@@ -58,6 +59,8 @@ public:
 	TSubclassOf<class AActor> specialBlockActorBlueprintType[NUM_SPECIAL_BLOCK_TYPES];
 	UPROPERTY(EditAnywhere, Category = Block)
 	TSubclassOf<class AActor> explosionActorBlutprintType;
+	UPROPERTY(EditAnywhere, Category = Block)
+	UPaperSprite* horizontalRibbonSprite;
 	UPROPERTY(EditAnywhere, Category = BlockOrganization)
 	float GRID_SIZE = 60.0f;
 	UPROPERTY(EditAnywhere, Category = BlockOrganization)
@@ -66,7 +69,9 @@ public:
 private:
 	void SpawnInitialBlocks();
 	void SpawnBlockActor(const PhysicalBlockSnapShot& physicalBlockSnapShot);
+	AActor* SpawnBlockActor(const PhysicalBlockSnapShot& physicalBlockSnapShot, const FVector* spawnPosition, const FRotator* spawnRotation);
 	UClass* GetBlockActorClassToSpawn(const PhysicalBlockSnapShot& physicalBlockSnapShot);
+	UClass* GetSpecialBlockActorClassToSpawn(const Block& block);
 	void UpdateBlockStatus(AActor* pBlock, const PhysicalBlockSnapShot& updatedPhysicalBlock);
 	void UpdateBlocks();
 	void DeleteBlockActor(int blockId);
