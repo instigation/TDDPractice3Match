@@ -29,6 +29,7 @@ BlockPhysics::~BlockPhysics()
 void BlockPhysics::Tick(float deltaSeconds)
 {
 	elapsedTime += deltaSeconds;
+	matchesOccuredInThisTick.Empty();
 	if(enableTickDebugLog)
 		UE_LOG(LogTemp, Display, TEXT("Tick start. Elapsed time: %f"), elapsedTime);
 	const auto snapshotsBeforeTick = GetPhysicalBlockSnapShots();
@@ -41,9 +42,17 @@ void BlockPhysics::Tick(float deltaSeconds)
 	const auto snapshotDiff = PhysicalBlocksSnapShotDiff(snapshotsBeforeTick, snapshotsAfterTick);
 	const auto blockIdsDestroyedInThisTick = snapshotDiff.GetJustDestroyedBlockIds();
 	RecursivelyApplyExplosionEffects(blockIdsDestroyedInThisTick);
+	const auto snapshotAfterExplosion = GetPhysicalBlockSnapShots();
+	const auto finalSnapshotDiff = PhysicalBlocksSnapShotDiff(snapshotsBeforeTick, snapshotAfterExplosion);
+	numDestroyedBlocksInThisTick = finalSnapshotDiff.GetJustDestroyedBlockIds().Num();
 	RemoveDeadBlocks();
 	ChangeCompletedActionsToNextActions(thereIsAMatch);
 	SetFallingActionsAndGenerateNewBlocks();
+}
+
+TSet<Match> BlockPhysics::GetMatchesInThisTick() const
+{
+	return matchesOccuredInThisTick;
 }
 
 void BlockPhysics::TickBlockActions(float deltaSeconds)
@@ -76,6 +85,7 @@ bool BlockPhysics::CheckAndProcessMatch()
 	auto thereIsAMatch = !blockMatrix.HasNoMatch();
 	if (thereIsAMatch) {
 		UE_LOG(LogTemp, Display, TEXT("match occured"));
+		matchesOccuredInThisTick = blockMatrix.GetMatches();
 		auto matchResult = blockMatrix.ProcessMatch(GetBlockInflowPositions());
 		StartDestroyingMatchedBlocksAccordingTo(matchResult);
 		SetSpecialBlocksSpawnAccordingTo(matchResult);

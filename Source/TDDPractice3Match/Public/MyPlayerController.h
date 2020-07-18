@@ -12,6 +12,7 @@ class AActor;
 class Block;
 enum class ActionType;
 class UPaperSprite;
+class Match;
 
 /**
  * 
@@ -76,6 +77,8 @@ private:
 	void UpdateBlocks();
 	void DeleteBlockActor(int blockId);
 
+	void AddScore(int score);
+	static int ComputeScore(const TSet<Match>& matches);
 
 	BlockPhysics* blockPhysics;
 	TMap<int, AActor*> idToBlockActorMap;

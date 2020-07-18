@@ -14,4 +14,8 @@ class TDDPRACTICE3MATCH_API ATDDPractice3MatchGameModeBase : public AGameModeBas
 {
 	GENERATED_BODY()
 	ATDDPractice3MatchGameModeBase();
+	
+public:
+	UPROPERTY(BlueprintReadWrite, Category=Score)
+	int score = 0;
 };

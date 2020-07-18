@@ -7,6 +7,7 @@ struct TDDPRACTICE3MATCH_API Formation {
 	Formation(const TArray<FIntPoint>& vectors, BlockSpecialAttribute specialBlock = BlockSpecialAttribute::NONE) : vectors(vectors), specialBlock(specialBlock) {};
 	bool NeedSpecialBlockSpawn() const { return vectors.Num() == 4; };
 	BlockSpecialAttribute GetBlockSpecialAttribute() const { return specialBlock; };
+	int GetScore() const { return 100 * vectors.Num(); }
 	bool operator==(const Formation& other) const;
 	TArray<FIntPoint> vectors;
 	BlockSpecialAttribute specialBlock;

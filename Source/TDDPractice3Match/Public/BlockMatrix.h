@@ -49,6 +49,7 @@ public:
 	bool HasNoMatch() const;
 	Block At(int row, int col) const;
 	MatchResult ProcessMatch(const TSet<FIntPoint>& specialBlockSpawnCandidatePositions);
+	TSet<Match> GetMatches() const;
 	int GetNumRows() const { return numRows; }
 	int GetNumCols() const { return numCols; }
 private:
@@ -56,7 +57,6 @@ private:
 	static int GetRow(FIntPoint point) { return point.X; }
 	static int GetCol(FIntPoint point) { return point.Y; }
 	bool IsOutOfMatrix(FIntPoint point) const;
-	TSet<Match> GetMatches() const;
 	TArray<Match> FindAMatchAt(FIntPoint point) const;
 	bool IsFormationOutOfMatrix(const Formation& formation, FIntPoint point) const;
 	bool ColorOfBlocksConsistentIn(const Formation& formation, FIntPoint point) const;

@@ -56,6 +56,10 @@ public:
 
 public:
 	void Tick(float deltaSeconds);
+	TSet<Match> GetMatchesInThisTick() const;
+	int GetNumDestroyedBlocksInThisTick() const {
+		return numDestroyedBlocksInThisTick;
+	}
 private:
 	void TickBlockActions(float deltaSeconds);
 	bool ShouldCheckMatch();
@@ -66,6 +70,8 @@ private:
 	void RemoveDeadBlocks();
 	void ChangeCompletedActionsToNextActions(bool thereIsAMatch);
 	void SetFallingActionsAndGenerateNewBlocks();
+	TSet<Match> matchesOccuredInThisTick;
+	int numDestroyedBlocksInThisTick;
 
 public:
 	void ReceiveSwipeInput(FIntPoint swipeStart, FIntPoint swipeEnd);

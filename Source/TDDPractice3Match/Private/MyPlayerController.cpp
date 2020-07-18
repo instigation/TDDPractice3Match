@@ -39,9 +39,13 @@ AMyPlayerController::~AMyPlayerController()
 
 void AMyPlayerController::Tick(float DeltaSeconds)
 {
-	if (blockPhysics)
-		blockPhysics->Tick(DeltaSeconds);
+	if (!blockPhysics)
+		return;
+	
+	blockPhysics->Tick(DeltaSeconds);
 	UpdateBlocks();
+	AddScore(blockPhysics->GetNumDestroyedBlocksInThisTick() *50);
+	AddScore(ComputeScore(blockPhysics->GetMatchesInThisTick()));
 }
 
 TWeakObjectPtr<AActor> AMyPlayerController::GetBlockUnderCursor(bool Debug)
@@ -293,4 +297,20 @@ void AMyPlayerController::DeleteBlockActor(int blockId)
 	pBlock->Destroy();
 	idToBlockActorMap.Remove(blockId);
 	idToActionTypeMap.Remove(blockId);
+}
+
+void AMyPlayerController::AddScore(int score)
+{
+	auto gameMode = Cast<ATDDPractice3MatchGameModeBase>(GetWorld()->GetAuthGameMode());
+	if (gameMode)
+		gameMode->score += score;
+}
+
+int AMyPlayerController::ComputeScore(const TSet<Match>& matches)
+{
+	auto ret = 0;
+	for (const auto& match : matches) {
+		ret += match.GetFormation().GetScore();
+	}
+	return ret;
 }
