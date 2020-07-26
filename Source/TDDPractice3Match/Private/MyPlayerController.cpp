@@ -12,6 +12,7 @@
 #include "BlockActor.h"
 #include "Block.h"
 #include "PaperSpriteComponent.h"
+#include "Sound/SoundWave.h"
 
 
 AMyPlayerController::AMyPlayerController() 
@@ -238,6 +239,36 @@ AActor* AMyPlayerController::SpawnBlockActor(const PhysicalBlockSnapShot& physic
 	}
 }
 
+void AMyPlayerController::PlayDestroySoundIfNeeded(const PhysicalBlockSnapShot& updatedPhysicalBlock)
+{
+	const auto originalActionType = idToActionTypeMap.FindRef(updatedPhysicalBlock.id);
+	const auto justStartedGettingDestroyed = (updatedPhysicalBlock.actionType == ActionType::GetsDestroyed) && (originalActionType != ActionType::GetsDestroyed);
+	if (!justStartedGettingDestroyed)
+		return;
+
+	if (updatedPhysicalBlock.block.IsSpecial())
+		PlaySpecialDestroySound();
+	else
+		RandomlyPlayNormalDestorySound();
+}
+
+void AMyPlayerController::PlaySpecialDestroySound()
+{
+	if (specialBlockPopSound == nullptr)
+		return;
+
+	UGameplayStatics::PlaySound2D(this, specialBlockPopSound);
+}
+
+void AMyPlayerController::RandomlyPlayNormalDestorySound()
+{
+	const auto randNum = rand() % NUM_NORMAL_BLOCK_POP_SOUNDS;
+	if (normalBlockPopSounds[randNum] == nullptr)
+		return;
+
+	UGameplayStatics::PlaySound2D(this, normalBlockPopSounds[randNum]);
+}
+
 void AMyPlayerController::UpdateBlockStatus(AActor* pBlockActor, const PhysicalBlockSnapShot& physicalBlockSnapShot)
 {
 	if (pBlockActor == nullptr)
@@ -273,6 +304,7 @@ void AMyPlayerController::UpdateBlocks()
 			SpawnBlockActor(physicalBlockSnapShot);
 		}
 		else if (ppBlockActor != nullptr){
+			PlayDestroySoundIfNeeded(physicalBlockSnapShot);
 			UpdateBlockStatus(*ppBlockActor, physicalBlockSnapShot);
 			notUpdatedBlockIds.Remove(physicalBlockSnapShot.id);
 		}

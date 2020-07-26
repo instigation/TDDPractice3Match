@@ -12,6 +12,7 @@ class AActor;
 class Block;
 enum class ActionType;
 class UPaperSprite;
+class USoundWave;
 class Match;
 
 /**
@@ -62,6 +63,11 @@ public:
 	TSubclassOf<class AActor> explosionActorBlutprintType;
 	UPROPERTY(EditAnywhere, Category = Block)
 	UPaperSprite* horizontalRibbonSprite;
+	constexpr static int NUM_NORMAL_BLOCK_POP_SOUNDS = 3;
+	UPROPERTY(EditAnywhere, Category = BlockSound)
+	USoundWave* normalBlockPopSounds[NUM_NORMAL_BLOCK_POP_SOUNDS];
+	UPROPERTY(EditAnywhere, Category = BlockSound)
+	USoundWave* specialBlockPopSound;
 	UPROPERTY(EditAnywhere, Category = BlockOrganization)
 	float GRID_SIZE = 60.0f;
 	UPROPERTY(EditAnywhere, Category = BlockOrganization)
@@ -73,6 +79,9 @@ private:
 	AActor* SpawnBlockActor(const PhysicalBlockSnapShot& physicalBlockSnapShot, const FVector* spawnPosition, const FRotator* spawnRotation);
 	UClass* GetBlockActorClassToSpawn(const PhysicalBlockSnapShot& physicalBlockSnapShot);
 	UClass* GetSpecialBlockActorClassToSpawn(const Block& block);
+	void PlayDestroySoundIfNeeded(const PhysicalBlockSnapShot& updatedPhysicalBlock);
+	void PlaySpecialDestroySound();
+	void RandomlyPlayNormalDestorySound();
 	void UpdateBlockStatus(AActor* pBlock, const PhysicalBlockSnapShot& updatedPhysicalBlock);
 	void UpdateBlocks();
 	void DeleteBlockActor(int blockId);
