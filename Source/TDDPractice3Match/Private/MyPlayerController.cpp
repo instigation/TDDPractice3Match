@@ -107,7 +107,6 @@ void AMyPlayerController::SetupInputComponent()
 	Super::SetupInputComponent();
 
 	InputComponent->BindAxis("LeftMouse", this, &AMyPlayerController::HandleLeftMouseInput);
-	InputComponent->BindAction("StartGame", IE_Pressed, this, &AMyPlayerController::SpawnInitialBlocks);
 }
 
 void AMyPlayerController::HandleLeftMouseInput(float value)
