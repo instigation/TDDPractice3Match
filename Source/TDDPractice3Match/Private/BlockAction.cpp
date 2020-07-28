@@ -115,8 +115,8 @@ TUniquePtr<BlockAction> GetsDestroyedAndSpawnBlockAfterAction::GetNextAction(boo
 	return MakeUnique<IdleBlockAction>(position);
 }
 
-MunchickenRollAction::MunchickenRollAction(FVector2D initialPos, FIntPoint rollDirection, BlockPhysics& blockPhysics)
-	: BlockAction(initialPos), lastRolledOverPosition(BlockPhysics::ToFIntPoint(initialPos)), rollDirection(rollDirection), blockPhysics(blockPhysics)
+MunchickenRollAction::MunchickenRollAction(FVector2D initialPos, FIntPoint rollDirection, BlockPhysics& blockPhysics, int rollableId)
+	: BlockAction(initialPos), lastRolledOverPosition(BlockPhysics::ToFIntPoint(initialPos)), rollDirection(rollDirection), blockPhysics(blockPhysics), rollableId(rollableId)
 {
 	if (rollDirection.X == 0)
 		rollType = Horizontal;
@@ -135,7 +135,7 @@ void MunchickenRollAction::Tick(float deltaSeconds)
 	const auto cellPositionsRolledOver = GetCellPositionsRolledOver();
 	for (const auto& rolledOverPosition : cellPositionsRolledOver)
 		lastRolledOverPosition = rolledOverPosition;
-	DestroyBlocksInBackground(cellPositionsRolledOver);
+	ApplyRollOverEffectAt(cellPositionsRolledOver);
 }
 
 bool MunchickenRollAction::IsJustCompleted() const
@@ -212,12 +212,12 @@ TSet<int> MunchickenRollAction::GetIntegersBetween(float bound1, float bound2)
 	return ret;
 }
 
-void MunchickenRollAction::DestroyBlocksInBackground(const TSet<FIntPoint>& destroyPositions)
+void MunchickenRollAction::ApplyRollOverEffectAt(const TSet<FIntPoint>& destroyPositions)
 {
 	for (const auto& destroyPosition : destroyPositions) {
 		UE_LOG(LogTemp, Display, TEXT("destroyed by munchicken at (%d, %d)"), destroyPosition.X, destroyPosition.Y);
 	}
-	blockPhysics.DestroyBlocksInBackgroundAt(destroyPositions, TSet<Block>{Block::MUNCHICKEN});
+	blockPhysics.ApplyRollOverEffectAt(destroyPositions, TSet<int>{rollableId}, rollDirection);
 }
 
 bool MunchickenRollAction::IsOutOfTheMap() const

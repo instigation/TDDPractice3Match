@@ -3,8 +3,8 @@
 #include "../Public/BlockPhysics.h"
 #include "GenericPlatform/GenericPlatformMath.h"
 
-BlockPhysics::BlockPhysics(const BlockMatrix& blockMatrix, TFunction<int(void)> newBlockGenerator)
-	:newBlockGenerator(newBlockGenerator)
+BlockPhysics::BlockPhysics(const BlockMatrix& blockMatrix, TFunction<int(void)> newBlockGenerator, TFunction<int(void)> randomDirectionGenerator)
+	:newBlockGenerator(newBlockGenerator), randomDirectionGenerator(randomDirectionGenerator)
 {
 	const auto block2DArray = blockMatrix.GetBlock2DArray();
 	numRows = block2DArray.Num();
@@ -30,6 +30,7 @@ void BlockPhysics::Tick(float deltaSeconds)
 {
 	elapsedTime += deltaSeconds;
 	matchesOccuredInThisTick.Empty();
+	blockIdsThatShouldNotTick.Empty();
 	if(enableTickDebugLog)
 		UE_LOG(LogTemp, Display, TEXT("Tick start. Elapsed time: %f"), elapsedTime);
 	const auto snapshotsBeforeTick = GetPhysicalBlockSnapShots();
@@ -58,6 +59,9 @@ TSet<Match> BlockPhysics::GetMatchesInThisTick() const
 void BlockPhysics::TickBlockActions(float deltaSeconds)
 {
 	for (auto& block : physicalBlocks) {
+		if (blockIdsThatShouldNotTick.Contains(block.GetId()))
+			continue;
+
 		block.currentAction->Tick(deltaSeconds);
 		if (block.currentAction->IsJustCompleted()) {
 			UE_LOG(LogTemp, Display, TEXT("action completed. Action type: %s, block type: %s, position: %f, %f"), 
@@ -206,8 +210,8 @@ void BlockPhysics::SetFallingActionsAndGenerateNewBlocks()
 		auto positionsInCol = PositionsInColumn(col, numRows-1);
 		auto topRow = -1;
 		while (!positionsInCol.IsEmpty()) {
-			auto destination = positionsInCol.PopLowest();
 			if (blocksInCol.IsEmpty()) {
+				auto destination = positionsInCol.PopLowest();
 				UE_LOG(LogTemp, Display, TEXT("New physicalBlock generated at: (%d, %d)"), topRow, col);
 				auto newBlock = PhysicalBlock(GetRandomBlock(), FIntPoint{ topRow--, col });
 				MakeBlockFallToDestination(newBlock, destination);
@@ -222,6 +226,7 @@ void BlockPhysics::SetFallingActionsAndGenerateNewBlocks()
 					continue;
 				}
 
+				auto destination = positionsInCol.PopLowest();
 				if (currentBlock.currentAction->GetPosition() != destination)
 					MakeBlockFallToDestination(currentBlock, destination);
 			}
@@ -250,7 +255,7 @@ void BlockPhysics::ReceiveSwipeInput(FIntPoint swipeStart, FIntPoint swipeEnd)
 	}
 	else {
 		FIntPoint rollDirection = swipeEnd - swipeStart;
-		startBlock->currentAction = MakeUnique<MunchickenRollAction>(swipeStart, rollDirection, *this);
+		startBlock->currentAction = MakeUnique<MunchickenRollAction>(swipeStart, rollDirection, *this, startBlock->GetId());
 	}
 }
 
@@ -311,17 +316,47 @@ bool BlockPhysics::IsIdleAt(FIntPoint position) const
 	return (pBlock != nullptr) && (pBlock->currentAction->GetType() == ActionType::Idle);
 }
 
-void BlockPhysics::DestroyBlocksInBackgroundAt(const TSet<FIntPoint>& destroyPositions, const TSet<Block>& exceptionalBlocks)
+void BlockPhysics::ApplyRollOverEffectAt(const TSet<FIntPoint>& destroyPositions, const TSet<int>& exceptionalBlockIds, FIntPoint rollingDirection)
 {
 	for (const auto& destroyPosition : destroyPositions) {
 		auto blocksAtDestroyPosition = GetBlocksAt(destroyPosition);
 		for (auto physicalBlock : blocksAtDestroyPosition) {
-			if (!exceptionalBlocks.Contains(physicalBlock->block)) {
+			if (exceptionalBlockIds.Contains(physicalBlock->GetId()))
+				continue;
+
+			if (physicalBlock->block.GetSpecialAttribute() == BlockSpecialAttribute::ROLLABLE){
+				if (physicalBlock->currentAction->GetType() != ActionType::Idle) {
+					continue;
+				}
+
+				const auto rollDirection = GetRandomOrthogonalDirectionFrom(rollingDirection);
+				physicalBlock->currentAction = MakeUnique<MunchickenRollAction>(destroyPosition, rollDirection, *this, physicalBlock->GetId());
+				blockIdsThatShouldNotTick.Add(physicalBlock->GetId());
+				UE_LOG(LogTemp, Display,
+					TEXT("Automatically rolling block: %s at (%d, %d) to direction (%d, %d)"),
+					*PrettyPrint(physicalBlock->block),
+					destroyPosition.X, destroyPosition.Y,
+					rollDirection.X, rollDirection.Y);
+			}
+			else {
 				physicalBlock->currentAction = MakeUnique<GetsDestroyedInBackgroundBlockAction>(destroyPosition);
-				UE_LOG(LogTemp, Display, TEXT("Destroying block: %s at (%d, %d) in background"), *PrettyPrint(physicalBlock->block), destroyPosition.X, destroyPosition.Y);
+				blockIdsThatShouldNotTick.Add(physicalBlock->GetId());
+				UE_LOG(LogTemp, Display, 
+					TEXT("Destroying block: %s at (%d, %d) in background"), 
+					*PrettyPrint(physicalBlock->block), 
+					destroyPosition.X, destroyPosition.Y);
 			}
 		}
 	}
+}
+
+PhysicalBlockSnapShot BlockPhysics::GetTopmostBlockSnapShotAt(FIntPoint position) const
+{
+	const auto topmostBlock = GetTopmostBlockAt(position);
+	if (topmostBlock == nullptr)
+		return PhysicalBlockSnapShot(-1, Block::INVALID, ActionType::Invalid, position);
+
+	return topmostBlock->GetSnapShot();
 }
 
 TArray<PhysicalBlockSnapShot> BlockPhysics::GetPhysicalBlockSnapShots() const
@@ -418,6 +453,10 @@ void BlockPhysics::SetSpecialBlocksSpawnAccordingTo(const MatchResult& matchResu
 
 void BlockPhysics::MakeBlockFallToDestination(PhysicalBlock& blockStatus, FIntPoint destination)
 {
+	UE_LOG(LogTemp, Display, TEXT("Start falling block %s at (%f,%f) to (%d,%d)"),
+		*PrettyPrint(blockStatus.block),
+		blockStatus.currentAction->GetPosition().X, blockStatus.currentAction->GetPosition().Y,
+		destination.X, destination.Y);
 	const auto initialPosition = ToFIntPoint(blockStatus.currentAction->GetPosition());
 	blockStatus.currentAction = MakeUnique<FallingBlockAction>(initialPosition, destination);
 }
@@ -441,6 +480,14 @@ Block BlockPhysics::GetRandomBlock()
 {
 	const auto normalBlocks = GetNormalBlocks();
 	return normalBlocks[newBlockGenerator() % normalBlocks.Num()];
+}
+
+FIntPoint BlockPhysics::GetRandomOrthogonalDirectionFrom(FIntPoint direction)
+{
+	auto ret = FIntPoint{ -direction.Y, direction.X };
+	if (randomDirectionGenerator() % 2 == 1)
+		ret = FIntPoint{ -ret.X, -ret.Y };
+	return ret;
 }
 
 PhysicalBlock::PhysicalBlock(Block block, FIntPoint initialPosition, TUniquePtr<BlockAction>&& action)

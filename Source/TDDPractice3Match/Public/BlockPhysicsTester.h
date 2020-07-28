@@ -11,7 +11,7 @@ class BlockPhysics;
 class TDDPRACTICE3MATCH_API BlockPhysicsTester
 {
 public:
-	explicit BlockPhysicsTester(const BlockMatrix& initialBlockMatrix, TFunction<int(void)> randomGenerator = rand);
+	explicit BlockPhysicsTester(const BlockMatrix& initialBlockMatrix, TFunction<int(void)> randomGeneratorForNewBlock = rand, TFunction<int(void)> randomGeneratorForDirection = rand);
 
 	void DoSwipe(const FIntPoint& swipeStart, const FIntPoint& swipeEnd) const;
 
@@ -31,6 +31,7 @@ public:
 	void TestBlockOccurrence(const Block& expectedBlock, int expectedOccurance) const;
 	void TestIfCorrectlyEmpty(const TSet<FIntPoint>& onlyPositionsThatShouldBeEmpty) const;
 	void TestIfBlockExistsAt(const Block& expectedBlock, const FIntPoint& expectedPosition) const;
+	void TestIfBlockExistsBetween(const FIntPoint& upperBound, const FIntPoint& lowerBound) const;
 	void TestIfBlockNotExistsAt(const Block& notExpectedBlock, const FIntPoint& positionToInspect) const;
 	void TestIfAllBlocksAreFilled() const;
 	void TestIfAlmostIdenticalTo(const BlockMatrix& blockMatrix, const TSet<FIntPoint>& exceptionalPositions) const;

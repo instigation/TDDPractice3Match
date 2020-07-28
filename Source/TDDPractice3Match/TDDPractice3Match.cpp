@@ -25,6 +25,8 @@ void FTDDPractice3MatchModuleImpl::ShutdownModule() {
 	FAutomationTestFramework::Get().UnregisterAutomationTest(TEXT("MunchickenShouldBeGeneratedAtBlockInflowPosition"));
 	FAutomationTestFramework::Get().UnregisterAutomationTest(TEXT("MunchickenVerticalRollShouldNotSpawnNewBlocks"));
 	FAutomationTestFramework::Get().UnregisterAutomationTest(TEXT("MunchickenShouldFallIfIdle"));
+	FAutomationTestFramework::Get().UnregisterAutomationTest(TEXT("RollableShouldRollOtherRollables"));
+	FAutomationTestFramework::Get().UnregisterAutomationTest(TEXT("OverlappedRollablesShouldNotMakeOtherBlockRise"));
 	FAutomationTestFramework::Get().UnregisterAutomationTest(TEXT("OneByFourMatchShouldSpawnLineClearBlock"));
 	FAutomationTestFramework::Get().UnregisterAutomationTest(TEXT("FourByOneMatchShouldSpawnLineClearBlock"));
 	FAutomationTestFramework::Get().UnregisterAutomationTest(TEXT("LineClearerShouldClearALineOnDestroy"));

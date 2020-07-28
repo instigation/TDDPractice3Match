@@ -4,8 +4,8 @@
 #include "BlockPhysics.h"
 #include "BlockMatrix.h"
 
-BlockPhysicsTester::BlockPhysicsTester(const BlockMatrix& initialBlockMatrix, TFunction<int(void)> randomGenerator /*= rand*/)
-	: blockPhysics(MakeUnique<BlockPhysics>(initialBlockMatrix, randomGenerator)), tickDivider(1)
+BlockPhysicsTester::BlockPhysicsTester(const BlockMatrix& initialBlockMatrix, TFunction<int(void)> randomGeneratorForNewBlock /*= rand*/, TFunction<int(void)> randomGeneratorForDirection /*=rand*/)
+	: blockPhysics(MakeUnique<BlockPhysics>(initialBlockMatrix, randomGeneratorForNewBlock, randomGeneratorForDirection)), tickDivider(1)
 {
 
 }
@@ -82,10 +82,19 @@ void BlockPhysicsTester::TestIfCorrectlyEmpty(const TSet<FIntPoint>& onlyPositio
 
 void BlockPhysicsTester::TestIfBlockExistsAt(const Block& expectedBlock, const FIntPoint& expectedPosition) const
 {
-	const auto actualBlockType = blockPhysics->GetBlockMatrix().At(expectedPosition.X, expectedPosition.Y);
+	const auto topmostBlockSnapshot = blockPhysics->GetTopmostBlockSnapShotAt(expectedPosition);
+	const auto actualBlockType = topmostBlockSnapshot.block;
 	if (actualBlockType != expectedBlock) {
 		UE_LOG(LogTemp, Error, TEXT("expected: %s but was %s at (%d, %d)"), *PrettyPrint(expectedBlock), *PrettyPrint(actualBlockType), expectedPosition.X, expectedPosition.Y);
 	}
+}
+
+void BlockPhysicsTester::TestIfBlockExistsBetween(const FIntPoint& upperBound, const FIntPoint& lowerBound) const
+{
+	if (!blockPhysics->ExistsBlockBetween(upperBound, lowerBound))
+		UE_LOG(LogTemp, Error, TEXT("Block does not exist between (%d,%d) and (%d,%d)"),
+			upperBound.X, upperBound.Y,
+			lowerBound.X, lowerBound.Y);
 }
 
 void BlockPhysicsTester::TestIfBlockNotExistsAt(const Block& notExpectedBlock, const FIntPoint& positionToInspect) const

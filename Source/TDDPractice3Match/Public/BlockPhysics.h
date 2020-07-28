@@ -49,7 +49,7 @@ class BlockMatrix;
 class TDDPRACTICE3MATCH_API BlockPhysics
 {
 public:
-	explicit BlockPhysics(const BlockMatrix& blockMatrix, TFunction<int(void)> newBlockGenerator = rand);
+	explicit BlockPhysics(const BlockMatrix& blockMatrix, TFunction<int(void)> newBlockGenerator = rand, TFunction<int(void)> randomDirectionGenerator = rand);
 	BlockPhysics(const BlockPhysics& other) = delete;
 	BlockPhysics(BlockPhysics&& other);
 	~BlockPhysics();
@@ -72,6 +72,7 @@ private:
 	void SetFallingActionsAndGenerateNewBlocks();
 	TSet<Match> matchesOccuredInThisTick;
 	int numDestroyedBlocksInThisTick;
+	TSet<int> blockIdsThatShouldNotTick;
 
 public:
 	void ReceiveSwipeInput(FIntPoint swipeStart, FIntPoint swipeEnd);
@@ -94,8 +95,9 @@ public:
 	bool IsPlayingDestroyAnimAt(FIntPoint position) const;
 	bool IsIdleAt(FIntPoint position) const;
 
-	void DestroyBlocksInBackgroundAt(const TSet<FIntPoint>& destroyPositions, const TSet<Block>& exceptionalBlocks);
+	void ApplyRollOverEffectAt(const TSet<FIntPoint>& destroyPositions, const TSet<int>& exceptionalBlockIds, FIntPoint rollingDirection);
 
+	PhysicalBlockSnapShot GetTopmostBlockSnapShotAt(FIntPoint position) const;
 	TArray<PhysicalBlockSnapShot> GetPhysicalBlockSnapShots() const;
 	BlockMatrix GetBlockMatrix() const;
 	int GetNumRows() const { return numRows; }
@@ -116,12 +118,12 @@ private:
 
 	static int ToInt(float value);
 	Block GetRandomBlock();
+	FIntPoint GetRandomOrthogonalDirectionFrom(FIntPoint direction);
 
 	TArray<PhysicalBlock> physicalBlocks;
 	int numRows = 0;
 	int numCols = 0;
 	float elapsedTime = 0.0f;
 	TFunction<int(void)> newBlockGenerator;
-
-
+	TFunction<int(void)> randomDirectionGenerator;
 };

@@ -11,7 +11,8 @@ enum class ActionType {
 	SwipeReturn,
 	Fall,
 	GetsDestroyed,
-	Roll
+	Roll,
+	Invalid
 };
 
 FString PrettyPrint(ActionType actionType);
@@ -127,7 +128,7 @@ private:
 class BlockPhysics;
 class MunchickenRollAction : public BlockAction {
 public:
-	MunchickenRollAction(FVector2D initialPos, FIntPoint rollDirection, BlockPhysics& blockPhysics);
+	MunchickenRollAction(FVector2D initialPos, FIntPoint rollDirection, BlockPhysics& blockPhysics, int rollableId);
 
 	void Tick(float deltaSeconds) override;
 	bool IsJustCompleted() const override;
@@ -141,12 +142,13 @@ private:
 	void UpdatePosition(float deltaSeconds);
 	TSet<FIntPoint> GetCellPositionsRolledOver() const;
 	static TSet<int> GetIntegersBetween(float bound1, float bound2);
-	void DestroyBlocksInBackground(const TSet<FIntPoint>& destroyPositions);
+	void ApplyRollOverEffectAt(const TSet<FIntPoint>& destroyPositions);
 	bool IsOutOfTheMap() const;
 	FVector2D previousPosition;
 	FIntPoint lastRolledOverPosition;
 	FIntPoint rollDirection;
 	BlockPhysics& blockPhysics;
+	int rollableId;
 	enum RollType {
 		Invalid,
 		Vertical,

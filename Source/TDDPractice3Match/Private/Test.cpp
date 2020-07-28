@@ -321,7 +321,6 @@ bool MunchickenVerticalRollShouldNotSpawnNewBlocks::RunTest(const FString& Param
 
 IMPLEMENT_SIMPLE_AUTOMATION_TEST(MunchickenShouldFallIfIdle, "Board.Rollable.Rollable should fall if idle", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
 bool MunchickenShouldFallIfIdle::RunTest(const FString& Parameters) {
-
 	const auto swipeStart = FIntPoint{ 0, 0 };
 	const auto swipeEnd = FIntPoint{ 1, 0 };
 	auto blockMatrix = BlockMatrix(TArray<TArray<Block>>{
@@ -340,6 +339,64 @@ bool MunchickenShouldFallIfIdle::RunTest(const FString& Parameters) {
 	blockPhysicsTester.TickUntilBlockFallEnd(1);
 	const auto munchickenExpectedPosition = FIntPoint{ 1, 1 };
 	blockPhysicsTester.TestIfBlockExistsAt(Block::MUNCHICKEN, munchickenExpectedPosition);
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(RollableShouldRollOtherRollables, "Board.Rollable.Rollable should roll other rollables", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool RollableShouldRollOtherRollables::RunTest(const FString& Parameters) {
+	const auto swipeStart = FIntPoint{ 1, 0 };
+	const auto swipeEnd = FIntPoint{ 1, 1 };
+	const auto blockMatrix = BlockMatrix(TArray<TArray<Block>>{
+		{ Block::ZERO, Block::ONE, Block::TWO, Block::THREE },
+		{ Block::MUNCHICKEN, Block::TWO, Block::MUNCHICKEN, Block::TWO },
+		{ Block::ONE, Block::TWO, Block::THREE, Block::FOUR }
+	});
+	auto counter = 0;
+	const auto newBlockGenerator = [&counter]() -> int {
+		return counter++;
+	};
+	const auto randomDirectionGenerator = []() -> int {
+		return 0;
+	};
+	auto blockPhysicsTester = BlockPhysicsTester(blockMatrix, newBlockGenerator, randomDirectionGenerator);
+	blockPhysicsTester.DoSwipe(swipeStart, swipeEnd);
+	blockPhysicsTester.TickUntilRollOneGrid();
+	blockPhysicsTester.TickUntilRollOneGrid();
+	blockPhysicsTester.TickUntilRollOneGrid();
+	blockPhysicsTester.TestIfBlockExistsAt(Block::MUNCHICKEN, FIntPoint{ 1,3 });
+	blockPhysicsTester.TestIfBlockExistsAt(Block::MUNCHICKEN, FIntPoint{ 0,2 });
+	blockPhysicsTester.TestIfBlockNotExistsAt(Block::MUNCHICKEN, FIntPoint{ 1, 2 });
+	return true;
+}
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(OverlappedRollablesShouldNotMakeOtherBlockRise, "Board.Rollable.Overlapped rollables should not make other block rise", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool OverlappedRollablesShouldNotMakeOtherBlockRise::RunTest(const FString& Parameters) {
+	const auto swipeStart = FIntPoint{ 2, 0 };
+	const auto swipeEnd = FIntPoint{ 2, 1 };
+	const auto blockMatrix = BlockMatrix(TArray<TArray<Block>>{
+		{ Block::ZERO, Block::ONE, Block::TWO, Block::THREE },
+		{ Block::ONE, Block::TWO, Block::THREE, Block::FOUR },
+		{ Block::MUNCHICKEN, Block::TWO, Block::MUNCHICKEN, Block::TWO }
+	});
+	auto counter = 0;
+	const auto newBlockGenerator = [&counter]() -> int {
+		return counter++;
+	};
+	const auto randomDirectionGenerator = []() -> int {
+		return 1;
+	};
+	auto blockPhysicsTester = BlockPhysicsTester(blockMatrix, newBlockGenerator, randomDirectionGenerator);
+	blockPhysicsTester.SetTickDivider(3);
+	blockPhysicsTester.DoSwipe(swipeStart, swipeEnd);
+	blockPhysicsTester.TickUntilRollOneGrid();
+	blockPhysicsTester.TickUntilRollOneGrid();
+	blockPhysicsTester.TickUntilRollOneGrid();
+	blockPhysicsTester.SetDuringFrequentTickTest(
+		[](const BlockPhysicsTester& tester) -> void {
+			tester.TestIfBlockExistsBetween(FIntPoint{ 1, 2 }, FIntPoint{ 2,2 });
+		}
+	);
+	blockPhysicsTester.TickUntilRollOneGrid();
 	return true;
 }
 
