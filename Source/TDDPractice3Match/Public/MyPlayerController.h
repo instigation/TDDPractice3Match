@@ -77,8 +77,6 @@ private:
 	void SpawnInitialBlocks();
 	void SpawnBlockActor(const PhysicalBlockSnapShot& physicalBlockSnapShot);
 	AActor* SpawnBlockActor(const PhysicalBlockSnapShot& physicalBlockSnapShot, const FVector* spawnPosition, const FRotator* spawnRotation);
-	UClass* GetBlockActorClassToSpawn(const PhysicalBlockSnapShot& physicalBlockSnapShot);
-	UClass* GetSpecialBlockActorClassToSpawn(const Block& block);
 	void PlayDestroySoundIfNeeded(const PhysicalBlockSnapShot& updatedPhysicalBlock);
 	void PlaySpecialDestroySound();
 	void RandomlyPlayNormalDestorySound();
