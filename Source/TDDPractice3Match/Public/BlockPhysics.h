@@ -94,6 +94,7 @@ public:
 	bool ExistsBlockNear(FIntPoint searchPosition, float threshold) const;
 	bool IsPlayingDestroyAnimAt(FIntPoint position) const;
 	bool IsIdleAt(FIntPoint position) const;
+	bool IsInAction() const;
 
 	void ApplyRollOverEffectAt(const TSet<FIntPoint>& destroyPositions, const TSet<int>& exceptionalBlockIds, FIntPoint rollingDirection);
 

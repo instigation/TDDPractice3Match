@@ -316,6 +316,16 @@ bool BlockPhysics::IsIdleAt(FIntPoint position) const
 	return (pBlock != nullptr) && (pBlock->currentAction->GetType() == ActionType::Idle);
 }
 
+bool BlockPhysics::IsInAction() const
+{
+	for (const auto& physicalBlock : physicalBlocks) {
+		if (physicalBlock.currentAction->GetType() != ActionType::Idle) {
+			return true;
+		}
+	}
+	return false;
+}
+
 void BlockPhysics::ApplyRollOverEffectAt(const TSet<FIntPoint>& destroyPositions, const TSet<int>& exceptionalBlockIds, FIntPoint rollingDirection)
 {
 	for (const auto& destroyPosition : destroyPositions) {

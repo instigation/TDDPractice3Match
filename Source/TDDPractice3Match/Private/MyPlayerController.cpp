@@ -84,6 +84,8 @@ void AMyPlayerController::DebugOutputHitResult(const FHitResult& hitResult)
 
 void AMyPlayerController::ProcessSwipeInput(bool debug)
 {
+	if (blockPhysics->IsInAction())
+		return;
 	const auto dragStartCellCoordinate = WorldPositionToCellCoordinate(dragStart);
 	const auto dragEndCellCoordinate = WorldPositionToCellCoordinate(dragEnd);
 	const auto dragDirection = dragEndCellCoordinate - dragStartCellCoordinate;

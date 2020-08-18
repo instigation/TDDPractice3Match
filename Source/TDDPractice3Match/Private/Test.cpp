@@ -487,3 +487,19 @@ bool OnlyOneSpecialBlockShouldBeGeneratedEvenIfManyCandidatePositions::RunTest(c
 	blockPhysicsTester.TestBlockOccurrence(Block(BlockColor::NONE, BlockSpecialAttribute::ROLLABLE), 1);
 	return true;
 }
+
+
+IMPLEMENT_SIMPLE_AUTOMATION_TEST(BlockPhysicsShouldReturnInActionWhenBlockMoving, "Board.Getters.Block physics should return 'in action' when any block is moving", EAutomationTestFlags::EditorContext | EAutomationTestFlags::EngineFilter)
+bool BlockPhysicsShouldReturnInActionWhenBlockMoving::RunTest(const FString& Parameters) {
+	auto blockPhysicsTester = BlockPhysicsTester(TestUtils::blockMatrix5x5);
+	blockPhysicsTester.SetTickDivider(10);
+	blockPhysicsTester.TestIsInAction(false);
+	blockPhysicsTester.DoSwipe(FIntPoint{ 0,0 }, FIntPoint{ 0,1 });
+	blockPhysicsTester.SetDuringFrequentTickTest([](const BlockPhysicsTester& tester) {
+		tester.TestIsInAction(true);
+		});
+	blockPhysicsTester.TickUntilSwipeMoveAnimationEnd();
+	blockPhysicsTester.TickUntilSwipeReturnAnimtaionEnd();
+	blockPhysicsTester.TestIsInAction(false);
+	return true;
+}

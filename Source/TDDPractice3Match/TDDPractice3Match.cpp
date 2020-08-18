@@ -31,6 +31,7 @@ void FTDDPractice3MatchModuleImpl::ShutdownModule() {
 	FAutomationTestFramework::Get().UnregisterAutomationTest(TEXT("FourByOneMatchShouldSpawnLineClearBlock"));
 	FAutomationTestFramework::Get().UnregisterAutomationTest(TEXT("LineClearerShouldClearALineOnDestroy"));
 	FAutomationTestFramework::Get().UnregisterAutomationTest(TEXT("OnlyOneSpecialBlockShouldBeGeneratedEvenIfManyCandidatePositions"));
+	FAutomationTestFramework::Get().UnregisterAutomationTest(TEXT("BlockPhysicsShouldReturnInActionWhenBlockMoving"));	
 	
 	
 	UE_LOG(LogTemp, Warning, TEXT("ShoutdownModule"));

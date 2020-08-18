@@ -39,6 +39,7 @@ public:
 	void TestIfNewBlocksSpawnedAtCol(int colToInspect, int expectedNewBlocksCount) const;
 	void TestIfNewBlocksSpawnedAtCol(const TSet<int>& newBlockSpawnExpectedCols) const;
 	void TestIfCorrectlyGettingDestroyed(const TSet<FIntPoint>& onlyPositionsThatShouldBeDestroyed) const;
+	void TestIsInAction(bool expectedValue) const;
 
 private:
 	void TickFor(float deltaSeconds);

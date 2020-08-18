@@ -198,6 +198,12 @@ void BlockPhysicsTester::TestIfCorrectlyGettingDestroyed(const TSet<FIntPoint>& 
 
 }
 
+void BlockPhysicsTester::TestIsInAction(bool expectedValue) const
+{
+	if (blockPhysics->IsInAction() != expectedValue)
+		UE_LOG(LogTemp, Error, TEXT("blockPhysics->IsInAction() should be %s but it's not"), expectedValue ? TEXT("true") : TEXT("false"));
+}
+
 void BlockPhysicsTester::TickFor(float deltaSeconds)
 {
 	for (int i = 0; i < tickDivider; i++) {
