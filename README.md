@@ -1,5 +1,8 @@
 # TDDPractice3Match
-3-match game implemented in Unreal Engine 4 to practice TDD
+3-match game implemented in Unreal Engine 4 to practice TDD. Since this project is intended to prove a point that unit testing is feasible and meaningful in game development, only the core features of a 3-match game are implemented. This means features such as options, ads, menus are not implemented.
+
+# Demo
+Check out the demo.mp4 file.
 
 # Credit (sprites)
 * candies: Code Inferno Games - codeinferno.com (https://opengameart.org/content/candy-match-3-animated-spinning-sprites)
